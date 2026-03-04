@@ -1,0 +1,117 @@
+package com.neocompany.taroro.global.security;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.neocompany.taroro.global.jwt.JwtAuthenticationFilter;
+import com.neocompany.taroro.global.oauth2.CustomOauth2UserService;
+import com.neocompany.taroro.global.oauth2.Oauth2FailureHandler;
+import com.neocompany.taroro.global.oauth2.Oauth2SuccessHandler;
+
+@Configuration
+@EnableWebSecurity
+@RequiredArgsConstructor
+public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CustomOauth2UserService customOauth2UserService;
+    private final Oauth2SuccessHandler oauth2SuccessHandler;
+    private final Oauth2FailureHandler oauth2FailureHandler;
+
+    @Bean
+    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> {})
+                .formLogin(form -> form.disable())     // 기본 로그인 페이지 비활성화
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))) // 인증 실패(미인증 접근) 시 401 응답 반환
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                // OAuth2 진입/콜백
+                                "/oauth2/authorization/**", "/login/oauth2/code/**").permitAll()
+                        .requestMatchers(
+                                "/api/auth/signup",
+                                "/api/auth/login",
+                                "/api/auth/email/verification",
+                                "/api/auth/email/verify",
+                                "/api/auth/logout",
+                                "/api/auth/refresh",
+                                "/api/auth/cookie/pickup",
+                                "/api/products/list",
+                                "/api/products/detail/**",
+                                "/api/detail/**",
+                                "/api/categories/list",
+                                "/api/artists/list",
+                                "/api/reviews/list",
+                                "/api/reviews/delete/**",
+                                "/api/payments/naver/ready",
+                                "/api/payments/naver/confirm",
+                                "/api/payments/naver/cancel",
+                                "/api/support/posts/list",
+                                "/api/support/posts/detail/**"
+                        ).permitAll() // 허용
+                        .requestMatchers(
+                                "/",
+                                "/index.html",
+                                "/toss-check.html","/success.html",
+                                "/favicon/**",
+                                // Vite 기본 산출물들
+                                "/assets/**",      // JS/CSS 번들
+                                "/vite.svg",       // Vite 아이콘
+                                "/*.css",          // /index.css 같은 루트 CSS
+                                "/*.js",           // 루트 JS가 있다면
+                                "/fonts/**",
+                                "/img/**"
+                        ).permitAll()
+                        .requestMatchers(
+                                "/api/admin/**",
+                                "/api/support/posts/answer/**"
+                        ).hasRole("ADMIN")
+                        .requestMatchers(
+                                "/api/auth/me",
+                                "/api/auth/withdraw",
+                                "/api/members/profile",
+                                "/api/carts/register",
+                                "/api/carts/list",
+                                "/api/carts/delete/**",
+                                "/api/payments/toss/ready",
+                                "/api/payments/toss/confirm",
+                                "/api/payments/nicepay/ready",
+                                "/api/payments/nicepay/return",
+                                "/api/payments/detail/**",
+                                "/api/payments/refund/**",
+                                "/api/orders/quote",
+                                "/api/orders/register",
+                                "/api/wishlists/register",
+                                "/api/wishlists/list",
+                                "/api/wishlists/delete/**",
+                                "/api/reviews/register",
+                                "/api/reviews/update/**",
+                                "/api/reviews/delete/**",
+                                "/api/support/posts/register",
+                                "/api/support/posts/update/**",
+                                "/api/support/posts/delete/**"
+                        ).authenticated() // 사용자 인증 필수
+                        .anyRequest().permitAll()
+                )
+                .oauth2Login(oauth -> oauth
+                        .userInfoEndpoint(userInfo -> userInfo.userService(customOauth2UserService))
+                        .successHandler(oauth2SuccessHandler)
+                        .failureHandler(oauth2FailureHandler)
+                )
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .logout(logout -> logout.disable());
+        return http.build();
+    }
+
+
+}

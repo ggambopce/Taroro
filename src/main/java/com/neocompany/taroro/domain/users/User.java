@@ -23,6 +23,12 @@ public class User {
     @Column(nullable = false, unique = true, length = 120)
     private String email;
 
+    @Column(nullable = false)
+    private String passwordHash;
+
+    @Column
+    private String name;
+
     @Column(length = 20)
     private String age;
 
