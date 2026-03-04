@@ -3,28 +3,35 @@ package com.neocompany.taroro.global.exception;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.NoHandlerFoundException;
 
-import jakarta.servlet.http.HttpServletRequest;
+import com.neocompany.taroro.global.response.ApiResponse;
 
-@RestControllerAdvice // 전역 예외 처리 활성화
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    /**
-     * 비즈니스 예외 처리 (개발자가 명시적으로 던진 예외)
-     */
+    // 비즈니스/유효성 에러 → HTTP 200, body statusCode 201
     @ExceptionHandler(BusinessException.class)
-    public ResponseEntity<ErrorResponseDto> handleBusinessException(BusinessException e, HttpServletRequest req) {
+    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
         ErrorCode code = e.getErrorCode();
-
-        // Exception에 커스텀 메시지가 있으면 사용, 없으면 기본 메시지 사용
         String message = (e.getMessage() != null && !e.getMessage().equals(code.getMessage()))
                 ? e.getMessage()
                 : code.getMessage();
+        return ResponseEntity.ok()
+                .body(ApiResponse.failure(201, message));
+    }
 
-        ErrorResponseDto body = new ErrorResponseDto(code, message);
+    // 잘못된 경로 → HTTP 404, body statusCode 404
+    @ExceptionHandler(NoHandlerFoundException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotFound() {
+        return ResponseEntity.status(404)
+                .body(ApiResponse.failure(404, "존재하지 않는 엔드포인트 입니다."));
+    }
 
-        return ResponseEntity
-                .status(code.getStatus())
-                .body(body);
+    // 서버 에러 → HTTP 500, body statusCode 502
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiResponse<Void>> handleException(Exception e) {
+        return ResponseEntity.status(500)
+                .body(ApiResponse.failure(502, "서버가 혼잡 하오니 잠시후 다시 시도해주세요..."));
     }
 }

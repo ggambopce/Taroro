@@ -1,20 +1,23 @@
 package com.neocompany.taroro.global.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
-    private final int code;
+    private final boolean success;
     private final String message;
-    private final T result;
+    private final int statusCode;
+    private final T data;
 
-    public static <T> ApiResponse<T> ok(String message, T result) {
-        return new ApiResponse<>(200, message, result);
+    public static <T> ApiResponse<T> ok(String message, T data) {
+        return new ApiResponse<>(true, message, 200, data);
     }
 
-    public static <T> ApiResponse<T> failure(int code, String message, T result){
-        return new ApiResponse<>(code, message, result);
+    public static <T> ApiResponse<T> failure(int statusCode, String message) {
+        return new ApiResponse<>(false, message, statusCode, null);
     }
 }

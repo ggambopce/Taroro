@@ -15,7 +15,7 @@ public enum ErrorCode {
     // 404 Not Found
     NOT_FOUND(404, HttpStatus.NOT_FOUND, "요청을 찾을 수 없습니다."),
     // 500 Internal Server Error
-    INTERNAL_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
+    INTERNAL_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "서버가 혼잡 하오니 잠시후 다시 시도해주세요..."),
 
     // 페이먼츠 관련 에러
     TOSS_API_HTTP_ERROR(502, HttpStatus.BAD_GATEWAY, "결제 서버 오류."),

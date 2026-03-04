@@ -3,7 +3,6 @@ package com.neocompany.taroro.global.sessions;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +12,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.neocompany.taroro.domain.users.UserRepository;
@@ -21,7 +19,6 @@ import com.neocompany.taroro.global.oauth2.PrincipalDetails;
 
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Arrays;
 
 @Slf4j
 @Component
