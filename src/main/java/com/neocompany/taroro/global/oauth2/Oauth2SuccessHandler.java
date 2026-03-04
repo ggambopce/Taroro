@@ -9,44 +9,36 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
-import com.neocompany.taroro.global.jwt.AuthCookieUtil;
-import com.neocompany.taroro.global.jwt.TokenService;
+import com.neocompany.taroro.global.sessions.SessionCookieUtil;
+import com.neocompany.taroro.global.sessions.SessionService;
 
 import java.io.IOException;
+import java.time.Duration;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
 public class Oauth2SuccessHandler implements AuthenticationSuccessHandler {
 
-    private final TokenService tokenService;
+    private final SessionService sessionService;
 
     @Override
-    public void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse res, Authentication authentication) throws IOException, ServletException {
-        log.info("Authentication Success 실행");
-        PrincipalDetails principalDetails = (PrincipalDetails) authentication.getPrincipal();
+    public void onAuthenticationSuccess(HttpServletRequest req, HttpServletResponse res, Authentication authentication)
+            throws IOException {
 
-        String email = principalDetails.getEmail();
-        if (email == null || email.isBlank()) {
-            log.error("소셜 로그인 성공 후 이메일이 비어 있음");
-            res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "이메일이 필요합니다.");
-            return;
-        }
+        PrincipalDetails principal = (PrincipalDetails) authentication.getPrincipal();
+        Long userId = principal.getUser().getUserId();
 
-        // AT/RT 발급
-        var pair = tokenService.issueAll(email);
-        // 동일 포맷 쿠키 세팅 (HttpOnly, SameSite 등 일괄 관리)
-        AuthCookieUtil.writeAuthCookies(res, pair.at(), pair.rt(), isHttps(req));
+        // 기존 SID 폐기
+        String oldSid = SessionCookieUtil.readCookie(req, "SID");
+        sessionService.deleteSession(oldSid);
 
-        // 로그인 후 JSON 응답
-        res.setStatus(HttpServletResponse.SC_OK);
-        res.setContentType("application/json;charset=UTF-8");
+        // 세션 생성 + 쿠키 발급
+        String sid = sessionService.createSession(userId, Duration.ofDays(365));
+        SessionCookieUtil.writeSidCookies(res, sid, isHttps(req));
 
         String redirectUri = getFrontendSuccessRedirect(req);
-
-        log.info("OAuth2 로그인 성공 → redirect: {}", redirectUri);
         res.sendRedirect(redirectUri);
-
     }
 
     private boolean isHttps(HttpServletRequest req) {
@@ -55,11 +47,7 @@ public class Oauth2SuccessHandler implements AuthenticationSuccessHandler {
     }
 
     private String getFrontendSuccessRedirect(HttpServletRequest req) {
-        // 운영 환경
-        if (isHttps(req)) {
-            return "https://matatabi-pkbe.vercel.app/auth/callback";
-        }
-        // 로컬 개발
+        if (isHttps(req)) return "https://matatabi-pkbe.vercel.app/auth/callback";
         return "http://localhost:5174/auth/callback";
     }
 

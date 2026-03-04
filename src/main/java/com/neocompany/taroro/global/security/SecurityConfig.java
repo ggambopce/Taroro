@@ -11,17 +11,17 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.neocompany.taroro.global.jwt.JwtAuthenticationFilter;
 import com.neocompany.taroro.global.oauth2.CustomOauth2UserService;
 import com.neocompany.taroro.global.oauth2.Oauth2FailureHandler;
 import com.neocompany.taroro.global.oauth2.Oauth2SuccessHandler;
+import com.neocompany.taroro.global.sessions.SessionAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final SessionAuthenticationFilter sessionAuthenticationFilter;
     private final CustomOauth2UserService customOauth2UserService;
     private final Oauth2SuccessHandler oauth2SuccessHandler;
     private final Oauth2FailureHandler oauth2FailureHandler;
@@ -32,6 +32,7 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
                 .formLogin(form -> form.disable())     // 기본 로그인 페이지 비활성화
+                // 서버 기본 HttpSession은 쓰지 않음(커스텀 세션 DB로만 인증 복원)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))) // 인증 실패(미인증 접근) 시 401 응답 반환
                 .authorizeHttpRequests(auth -> auth
@@ -108,7 +109,7 @@ public class SecurityConfig {
                         .successHandler(oauth2SuccessHandler)
                         .failureHandler(oauth2FailureHandler)
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(sessionAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .logout(logout -> logout.disable());
         return http.build();
     }

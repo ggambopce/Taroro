@@ -9,12 +9,11 @@ import org.springframework.transaction.annotation.Transactional;
 import com.neocompany.taroro.domain.users.dto.MeAuthResponseDto;
 import com.neocompany.taroro.global.exception.BusinessException;
 import com.neocompany.taroro.global.exception.ErrorCode;
-import com.neocompany.taroro.global.jwt.AuthCookieUtil;
-import com.neocompany.taroro.global.jwt.TokenService;
+import com.neocompany.taroro.global.sessions.SessionCookieUtil;
+import com.neocompany.taroro.global.sessions.SessionService;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 
 @Service
@@ -22,7 +21,7 @@ import lombok.RequiredArgsConstructor;
 public class UserService {
     private final UserRepository userRepository;
 
-    private final TokenService tokenService;
+    private final SessionService tokenService;
 
     private static final boolean SECURE_COOKIE = false; // 운영 HTTPS면 true
 
@@ -34,22 +33,17 @@ public class UserService {
      */
     public void logout(HttpServletRequest req, HttpServletResponse res) {
 
-        // 1) 서버측 토큰 폐기 (RT가 있을 때만)
-        String rt = AuthCookieUtil.readCookie(req, "RT");
-        if (rt != null && !rt.isBlank()) {
-            tokenService.logoutByRefreshToken(rt);
+        // 1) SID 쿠키로 DB 세션 삭제
+        String sid = SessionCookieUtil.readCookie(req, "SID");
+        if (sid != null && !sid.isBlank()) {
+            tokenService.deleteSession(sid);
         }
 
-        // 2) 클라이언트 쿠키 제거 (도메인/경로/보안 옵션은 기존 정책에 맞춤)
-        AuthCookieUtil.deleteCookie(res, "AT", null, "/", SECURE_COOKIE, "Lax");
-        AuthCookieUtil.deleteCookie(res, "RT", null, "/", SECURE_COOKIE, "Lax");
-        AuthCookieUtil.deleteCookie(res, "FAM", null, "/", SECURE_COOKIE, "Lax");
+        // 2) SID 쿠키 제거
+        SessionCookieUtil.clearSidCookie(res, SECURE_COOKIE);
 
-        // 3) 세션/시큐리티 컨텍스트 정리 (무상태지만 방어적으로 처리)
-        HttpSession session = req.getSession(false);
-        if (session != null) session.invalidate();
+        // 3) SecurityContext 정리
         SecurityContextHolder.clearContext();
-
     }
 
     @Transactional
