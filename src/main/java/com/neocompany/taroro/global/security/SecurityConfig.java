@@ -37,6 +37,10 @@ public class SecurityConfig {
                 .exceptionHandling(e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))) // 인증 실패(미인증 접근) 시 401 응답 반환
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(
+                                // Swagger UI
+                                "/swagger", "/swagger/**", "/swagger-ui/**",
+                                "/api-docs", "/api-docs/**").permitAll()
+                        .requestMatchers(
                                 // OAuth2 진입/콜백
                                 "/oauth2/authorization/**", "/login/oauth2/code/**").permitAll()
                         .requestMatchers(
