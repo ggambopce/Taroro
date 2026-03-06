@@ -49,20 +49,7 @@ public class SecurityConfig {
                                 "/api/auth/email/verification",
                                 "/api/auth/email/verify",
                                 "/api/auth/logout",
-                                "/api/auth/refresh",
-                                "/api/auth/cookie/pickup",
-                                "/api/products/list",
-                                "/api/products/detail/**",
-                                "/api/detail/**",
-                                "/api/categories/list",
-                                "/api/artists/list",
-                                "/api/reviews/list",
-                                "/api/reviews/delete/**",
-                                "/api/payments/naver/ready",
-                                "/api/payments/naver/confirm",
-                                "/api/payments/naver/cancel",
-                                "/api/support/posts/list",
-                                "/api/support/posts/detail/**"
+                                "/api/auth/password/reset"
                         ).permitAll() // 허용
                         .requestMatchers(
                                 "/",

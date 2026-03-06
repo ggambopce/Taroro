@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.neocompany.taroro.domain.email.EmailRequestDto;
+import com.neocompany.taroro.domain.email.EmailVerifyRequestDto;
 import com.neocompany.taroro.domain.users.docs.UserControllerDocs;
 import com.neocompany.taroro.domain.users.dto.LoginRequestDto;
 import com.neocompany.taroro.domain.users.dto.MeAuthResponseDto;
@@ -16,7 +17,7 @@ import com.neocompany.taroro.domain.users.dto.ResetPasswordRequestDto;
 import com.neocompany.taroro.domain.users.dto.SignupRequestDto;
 import com.neocompany.taroro.domain.users.dto.WithdrawRequestDto;
 import com.neocompany.taroro.global.oauth2.PrincipalDetails;
-import com.neocompany.taroro.global.response.ApiResponse;
+import com.neocompany.taroro.global.response.GlobalApiResponse;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -33,10 +34,10 @@ public class UserController implements UserControllerDocs {
 
     @Override
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<?>> login(@RequestBody @Valid LoginRequestDto req, HttpServletResponse res) {
+    public ResponseEntity<GlobalApiResponse<?>> login(@RequestBody @Valid LoginRequestDto req, HttpServletResponse res) {
 
         userService.login(req, res);
-        return ResponseEntity.ok(ApiResponse.ok("로그인 성공", null));
+        return ResponseEntity.ok(GlobalApiResponse.ok("로그인 성공", null));
     }
 
     /**
@@ -45,9 +46,9 @@ public class UserController implements UserControllerDocs {
      */
     @Override
     @PostMapping("/signup")
-    public ResponseEntity<ApiResponse<?>> signup(@RequestBody @Valid SignupRequestDto req){
+    public ResponseEntity<GlobalApiResponse<?>> signup(@RequestBody @Valid SignupRequestDto req){
         userService.signup(req);
-        return ResponseEntity.ok(ApiResponse.ok("회원가입 성공", null));
+        return ResponseEntity.ok(GlobalApiResponse.ok("회원가입 성공", null));
     }
 
     /**
@@ -57,11 +58,11 @@ public class UserController implements UserControllerDocs {
      */
     @Override
     @PostMapping("/duplications/email")
-    public ResponseEntity<ApiResponse<Boolean>> dupEmail(@RequestBody @Valid EmailRequestDto req){
+    public ResponseEntity<GlobalApiResponse<Boolean>> dupEmail(@RequestBody @Valid EmailRequestDto req){
         boolean result = userService.isEmailDuplicated(req.getEmail());
         String message = result ? "이미 사용중인 이메일입니다." : "사용가능 이메일입니다.";
 
-        return ResponseEntity.ok(ApiResponse.ok(message, result));
+        return ResponseEntity.ok(GlobalApiResponse.ok(message, result));
     }
 
     /**
@@ -71,9 +72,9 @@ public class UserController implements UserControllerDocs {
      */
     @Override
     @PostMapping("/email/verification")
-    public ResponseEntity<ApiResponse<?>> send(@RequestBody @Valid EmailRequestDto req) {
+    public ResponseEntity<GlobalApiResponse<?>> send(@RequestBody @Valid EmailRequestDto req) {
         userService.sendVerificationCode(req.getEmail());
-        return ResponseEntity.ok(ApiResponse.ok("이메일 코드 발송 성공", null));
+        return ResponseEntity.ok(GlobalApiResponse.ok("이메일 코드 발송 성공", null));
     }
 
     /**
@@ -82,50 +83,50 @@ public class UserController implements UserControllerDocs {
      * @return boolean
      */
     @PostMapping("/email/verify")
-    public ResponseEntity<ApiResponse<Boolean>> verify(@RequestBody @Valid EmailVerifyRequestDto req){
+    public ResponseEntity<GlobalApiResponse<Boolean>> verify(@RequestBody @Valid EmailVerifyRequestDto req){
         boolean result = userService.verifyCode(req.getEmail(), req.getCode());
         String message = result ? "인증을 성공했습니다." : "코드가 일치하지 않습니다.";
-        return ResponseEntity.ok(ApiResponse.ok(message, result));
+        return ResponseEntity.ok(GlobalApiResponse.ok(message, result));
     }
 
     @Override
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<MeAuthResponseDto>> me(@AuthenticationPrincipal PrincipalDetails principal) {
+    public ResponseEntity<GlobalApiResponse<MeAuthResponseDto>> me(@AuthenticationPrincipal PrincipalDetails principal) {
         User user = principal.getUser();
         MeAuthResponseDto result = userService.getMeAuth(user);
-        return ResponseEntity.ok(ApiResponse.ok("로그인 사용자 정보", result));
+        return ResponseEntity.ok(GlobalApiResponse.ok("로그인 사용자 정보", result));
     }
 
     @Override
     @PostMapping("/logout")
-    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest req, HttpServletResponse res) {
+    public ResponseEntity<GlobalApiResponse<Void>> logout(HttpServletRequest req, HttpServletResponse res) {
         userService.logout(req, res);
-        return ResponseEntity.ok(ApiResponse.ok("로그아웃 완료", null));
+        return ResponseEntity.ok(GlobalApiResponse.ok("로그아웃 완료", null));
     }
 
     // 비밀번호 변경
     @Override
     @PostMapping("/password/reset")
-    public ResponseEntity<ApiResponse<?>> resetPassword(@RequestBody @Valid ResetPasswordRequestDto req
+    public ResponseEntity<GlobalApiResponse<?>> resetPassword(@RequestBody @Valid ResetPasswordRequestDto req
     ) {
 
         // 인증된 사용자 이메일 기반으로 비밀번호 변경
         userService.resetPassword(req);
-        return ResponseEntity.ok(ApiResponse.ok("비밀번호 변경 성공", null));
+        return ResponseEntity.ok(GlobalApiResponse.ok("비밀번호 변경 성공", null));
     }
 
     @Override
     @PostMapping("/withdraw")
-    public ResponseEntity<ApiResponse<Void>> withdraw(
+    public ResponseEntity<GlobalApiResponse<Void>> withdraw(
             @AuthenticationPrincipal PrincipalDetails principal,
-            @RequestBody(required = false) WithdrawRequestDto body,
+            @RequestBody(required = false) @Valid WithdrawRequestDto body,
             HttpServletRequest request,
             HttpServletResponse response
     ) {
         User user = principal.getUser();
         String password = (body != null ? body.getPassword() : null);
         userService.withdraw(user, password, request, response);
-        return ResponseEntity.ok(ApiResponse.ok("회원탈퇴 완료", null));
+        return ResponseEntity.ok(GlobalApiResponse.ok("회원탈퇴 완료", null));
     }
 
     

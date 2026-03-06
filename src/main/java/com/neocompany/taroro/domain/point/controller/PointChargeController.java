@@ -14,7 +14,7 @@ import com.neocompany.taroro.domain.point.dto.PointChargeReadyResponseDto;
 import com.neocompany.taroro.domain.point.service.PointChargeService;
 import com.neocompany.taroro.domain.users.User;
 import com.neocompany.taroro.global.oauth2.PrincipalDetails;
-import com.neocompany.taroro.global.response.ApiResponse;
+import com.neocompany.taroro.global.response.GlobalApiResponse;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,21 +28,21 @@ public class PointChargeController implements PointChargeControllerDocs {
 
     @Override
     @PostMapping("/toss/ready")
-    public ResponseEntity<ApiResponse<PointChargeReadyResponseDto>> ready(
+    public ResponseEntity<GlobalApiResponse<PointChargeReadyResponseDto>> ready(
             @AuthenticationPrincipal PrincipalDetails principal,
             @RequestBody @Valid PointChargeReadyRequestDto body
     ) {
         User user = principal.getUser();
         PointChargeReadyResponseDto result = pointChargeService.ready(user, body);
-        return ResponseEntity.ok(ApiResponse.ok("충전 준비 완료", result));
+        return ResponseEntity.ok(GlobalApiResponse.ok("충전 준비 완료", result));
     }
 
     @Override
     @PostMapping("/toss/confirm")
-    public ResponseEntity<ApiResponse<Void>> confirm(
+    public ResponseEntity<GlobalApiResponse<Void>> confirm(
             @RequestBody @Valid PointChargeConfirmRequestDto body
     ) {
         pointChargeService.confirm(body);
-        return ResponseEntity.ok(ApiResponse.ok("포인트 충전 완료", null));
+        return ResponseEntity.ok(GlobalApiResponse.ok("포인트 충전 완료", null));
     }
 }

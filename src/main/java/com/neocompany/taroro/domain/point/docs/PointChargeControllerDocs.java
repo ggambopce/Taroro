@@ -6,6 +6,7 @@ import com.neocompany.taroro.domain.point.dto.PointChargeConfirmRequestDto;
 import com.neocompany.taroro.domain.point.dto.PointChargeReadyRequestDto;
 import com.neocompany.taroro.domain.point.dto.PointChargeReadyResponseDto;
 import com.neocompany.taroro.global.oauth2.PrincipalDetails;
+import com.neocompany.taroro.global.response.GlobalApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -44,7 +45,7 @@ public interface PointChargeControllerDocs {
         ),
         @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content)
     })
-    ResponseEntity<com.neocompany.taroro.global.response.ApiResponse<PointChargeReadyResponseDto>> ready(
+    ResponseEntity<GlobalApiResponse<PointChargeReadyResponseDto>> ready(
         @Parameter(hidden = true) PrincipalDetails principal,
         PointChargeReadyRequestDto body
     );
@@ -76,7 +77,7 @@ public interface PointChargeControllerDocs {
         ),
         @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content)
     })
-    ResponseEntity<com.neocompany.taroro.global.response.ApiResponse<Void>> confirm(
+    ResponseEntity<GlobalApiResponse<Void>> confirm(
         PointChargeConfirmRequestDto body
     );
 }

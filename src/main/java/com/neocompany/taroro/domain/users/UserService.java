@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.concurrent.ThreadLocalRandom;
 
+import org.springframework.mail.MailException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -195,11 +196,12 @@ public class UserService {
         String loginType = user.getLoginType();
 
         if ("normal".equals(loginType)) {
-            // 비밀번호 필수
             if (password == null || password.isBlank()) {
                 throw new BusinessException(ErrorCode.INVALID_REQUEST, "현재 비밀번호가 필요합니다.");
             }
-
+            if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+                throw new BusinessException(ErrorCode.UNAUTHORIZED, "비밀번호가 일치하지 않습니다.");
+            }
         } else if (isSocialLogin(loginType)) {
             // 소셜로그인은 비밀번호 검증 스킵
         } else {
