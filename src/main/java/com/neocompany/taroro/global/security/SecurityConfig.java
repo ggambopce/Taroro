@@ -67,7 +67,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/",
                                 "/index.html",
-                                "/toss-check.html","/success.html",
+                                "/toss-check.html", "/success.html", "/point-check.html",
                                 "/favicon/**",
                                 // Vite 기본 산출물들
                                 "/assets/**",      // JS/CSS 번들
@@ -84,27 +84,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/me",
                                 "/api/auth/withdraw",
-                                "/api/members/profile",
-                                "/api/carts/register",
-                                "/api/carts/list",
-                                "/api/carts/delete/**",
-                                "/api/payments/toss/ready",
-                                "/api/payments/toss/confirm",
-                                "/api/payments/nicepay/ready",
-                                "/api/payments/nicepay/return",
-                                "/api/payments/detail/**",
-                                "/api/payments/refund/**",
-                                "/api/orders/quote",
-                                "/api/orders/register",
-                                "/api/wishlists/register",
-                                "/api/wishlists/list",
-                                "/api/wishlists/delete/**",
-                                "/api/reviews/register",
-                                "/api/reviews/update/**",
-                                "/api/reviews/delete/**",
-                                "/api/support/posts/register",
-                                "/api/support/posts/update/**",
-                                "/api/support/posts/delete/**"
+                                "/api/auth/logout",
+                                "/api/point/charge/toss/ready",
+                                "/api/point/charge/toss/confirm"
                         ).authenticated() // 사용자 인증 필수
                         .anyRequest().permitAll()
                 )

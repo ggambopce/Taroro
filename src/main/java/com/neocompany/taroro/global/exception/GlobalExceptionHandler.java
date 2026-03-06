@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import com.neocompany.taroro.global.response.ApiResponse;
 
@@ -22,7 +23,7 @@ public class GlobalExceptionHandler {
     }
 
     // 잘못된 경로 → HTTP 404, body statusCode 404
-    @ExceptionHandler(NoHandlerFoundException.class)
+    @ExceptionHandler({NoHandlerFoundException.class, NoResourceFoundException.class})
     public ResponseEntity<ApiResponse<Void>> handleNotFound() {
         return ResponseEntity.status(404)
                 .body(ApiResponse.failure(404, "존재하지 않는 엔드포인트 입니다."));
