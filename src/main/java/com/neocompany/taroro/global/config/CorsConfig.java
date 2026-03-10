@@ -42,7 +42,8 @@ public class CorsConfig {
                 "http://localhost:8080",
                 "http://218.38.136.81:8080",
                 "https://taro.neocompany.co.kr",
-                "https://supretest.taro.neocompany.co.kr"
+                "https://supretest.taro.neocompany.co.kr",
+                "http://124.194.54.194:5174"
         ));
         // 허용할 HTTP 메서드 목록
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS"));
