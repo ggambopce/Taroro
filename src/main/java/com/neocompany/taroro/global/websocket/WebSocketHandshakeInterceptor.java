@@ -10,9 +10,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.server.HandshakeInterceptor;
 
-import com.neocompany.taroro.global.sessions.SessionPrincipal;
-import com.neocompany.taroro.global.sessions.SessionService;
-
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 

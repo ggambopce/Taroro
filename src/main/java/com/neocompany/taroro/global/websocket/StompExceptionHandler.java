@@ -5,11 +5,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.MessageBuilder;
 import org.springframework.stereotype.Component;
+import org.springframework.web.socket.WebSocketHandler;
 import org.springframework.web.socket.messaging.StompSubProtocolErrorHandler;
 import org.springframework.web.socket.messaging.StompSubProtocolHandler;
 import org.springframework.web.socket.messaging.SubProtocolWebSocketHandler;
@@ -26,14 +28,15 @@ public class StompExceptionHandler extends StompSubProtocolErrorHandler
     private final ObjectMapper objectMapper;
 
     @Autowired
-    private SubProtocolWebSocketHandler subProtocolWebSocketHandler;
+    @Qualifier("subProtocolWebSocketHandler")
+    private WebSocketHandler subProtocolWebSocketHandler;
 
     /**
      * 모든 싱글톤 빈 생성 완료 후 자기 자신을 STOMP 에러 핸들러로 등록
      */
     @Override
     public void afterSingletonsInstantiated() {
-        subProtocolWebSocketHandler.getProtocolHandlerMap().values().stream()
+        ((SubProtocolWebSocketHandler) subProtocolWebSocketHandler).getProtocolHandlerMap().values().stream()
                 .filter(StompSubProtocolHandler.class::isInstance)
                 .map(StompSubProtocolHandler.class::cast)
                 .forEach(h -> h.setErrorHandler(this));

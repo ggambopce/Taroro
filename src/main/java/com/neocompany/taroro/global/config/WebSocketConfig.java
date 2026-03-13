@@ -50,4 +50,3 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
         registration.interceptors(stompChannelInterceptor);
     }
 }
-
