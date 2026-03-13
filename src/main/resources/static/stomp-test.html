@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>STOMP Test</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #d4d4d4; }
+    button { margin: 4px; padding: 8px 16px; cursor: pointer; background: #0e639c; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #1177bb; }
+    #log { background: #252526; border: 1px solid #3c3c3c; padding: 12px; height: 400px; overflow-y: auto; margin-top: 12px; border-radius: 4px; }
+    .recv { color: #4ec9b0; }
+    .sent { color: #dcdcaa; }
+    .info { color: #9cdcfe; }
+    .error { color: #f44747; }
+    input { background: #3c3c3c; color: #d4d4d4; border: 1px solid #6b6b6b; padding: 6px; border-radius: 4px; width: 300px; }
+  </style>
+</head>
+<body>
+  <h2>STOMP WebSocket Test</h2>
+
+  <div>
+    <button onclick="connect()">1. Connect</button>
+    <button onclick="subscribe()">2. Subscribe /topic/test</button>
+    <button onclick="sendMsg()">3. Send /app/test</button>
+    <button onclick="disconnect()">Disconnect</button>
+    <button onclick="clearLog()">Clear</button>
+  </div>
+
+  <div style="margin-top:10px">
+    SID 쿠키:
+    <input id="sidInput" placeholder="API 서버 로그인 후 SID 값 입력" style="width:420px" />
+    <button onclick="setSid()">SID 쿠키 세팅</button>
+  </div>
+  <div style="margin-top:8px">
+    메시지:
+    <input id="msgInput" value='{"message":"hello stomp"}' />
+  </div>
+
+  <div id="log"></div>
+
+  <script>
+    let client;
+
+    function log(msg, type = 'info') {
+      const el = document.getElementById('log');
+      const time = new Date().toLocaleTimeString();
+      el.innerHTML += `<div class="${type}">[${time}] ${msg}</div>`;
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function connect() {
+      client = new StompJs.Client({
+        webSocketFactory: () => new SockJS('http://localhost:8080/ws/chat'),
+        reconnectDelay: 0,
+        onConnect: () => {
+          log('✅ CONNECTED', 'recv');
+        },
+        onDisconnect: () => {
+          log('🔌 DISCONNECTED', 'info');
+        },
+        onStompError: (frame) => {
+          log('❌ STOMP ERROR: ' + frame.headers['message'], 'error');
+        },
+        onWebSocketError: (e) => {
+          log('❌ WebSocket ERROR: ' + e, 'error');
+        },
+        debug: (str) => {
+          log('[DEBUG] ' + str, 'info');
+        }
+      });
+      client.activate();
+      log('🔄 Connecting to http://localhost:8080/ws/chat (SockJS)...', 'info');
+    }
+
+    function subscribe() {
+      if (!client?.connected) { log('먼저 Connect 하세요', 'error'); return; }
+      client.subscribe('/topic/test', (msg) => {
+        log('📨 RECEIVED: ' + msg.body, 'recv');
+      });
+      log('👂 Subscribed to /topic/test', 'sent');
+    }
+
+    function sendMsg() {
+      if (!client?.connected) { log('먼저 Connect 하세요', 'error'); return; }
+      const body = document.getElementById('msgInput').value;
+      client.publish({ destination: '/app/test', body });
+      log('📤 SENT to /app/test: ' + body, 'sent');
+    }
+
+    function disconnect() {
+      client?.deactivate();
+    }
+
+    function setSid() {
+      const sid = document.getElementById('sidInput').value.trim();
+      if (!sid) { log('SID 값을 입력하세요', 'error'); return; }
+      document.cookie = `SID=${sid}; path=/`;
+      log(`✅ SID 쿠키 세팅 완료: ${sid}`, 'recv');
+    }
+
+    function clearLog() {
+      document.getElementById('log').innerHTML = '';
+    }
+  </script>
+</body>
+</html>

@@ -53,6 +53,10 @@ Package root: `com.neocompany.taroro`
 domain/           # JPA 엔티티 + 레포지토리 (도메인별)
   users/
     docs/         # Swagger 인터페이스 (컨트롤러 어노테이션 분리)
+  room/           # 상담방 도메인 — HTTP + STOMP 이중 컨트롤러
+  message/        # 채팅 메시지, 읽음 처리, 타이핑 이벤트
+  notification/   # 사용자 알림 이벤트 발행
+  signaling/      # WebRTC 시그널링 이벤트
 global/
   config/
     swagger/      # SwaggerConfig — OpenAPI 전역 설정
@@ -62,6 +66,8 @@ global/
   oauth2/         # CustomOauth2UserService, handlers, provider별 UserInfo
   exception/      # GlobalExceptionHandler, BusinessException, ErrorCode
   response/       # ApiResponse<T> — 모든 응답 공통 래퍼
+  websocket/      # WebSocketHandshakeInterceptor, PrincipalHandshakeHandler
+                  # StompChannelInterceptor, StompExceptionHandler
 ```
 
 ## Key Architectural Patterns
@@ -107,6 +113,35 @@ global/
 - `result`는 `null`이면 JSON에서 제외 (`@JsonInclude(NON_NULL)`)
 - 모든 리스트 조회는 `limit`(기본 20), `offset` 쿼리 파라미터 지원
 
+### STOMP WebSocket Architecture
+
+**엔드포인트:**
+- `/ws/chat` — SockJS fallback 포함 (프론트 연결용)
+- `/ws/chat-raw` — 순수 WebSocket (테스트용, `stomp-test.html`)
+
+**인증 흐름:**
+1. `WebSocketHandshakeInterceptor` — HTTP 핸드셰이크 시 `SID` 쿠키로 세션 인증 → `SessionPrincipal`을 WebSocket 속성에 저장
+2. `PrincipalHandshakeHandler` — 속성에서 Principal 생성
+3. `StompChannelInterceptor` — STOMP 프레임별 권한 검사 (CONNECT/SUBSCRIBE/SEND)
+
+**Destination 패턴:**
+| 방향 | 패턴 | 용도 |
+|---|---|---|
+| 클라이언트 → 서버 | `/app/rooms/{roomId}/enter\|leave\|start\|end` | 방 상태 명령 |
+| 클라이언트 → 서버 | `/app/rooms/{roomId}/messages\|read\|typing` | 채팅 명령 |
+| 서버 → 구독자 | `/topic/room.{roomId}` | 방/메시지 이벤트 브로드캐스트 |
+| 서버 → 구독자 | `/topic/waiting.{masterId}` | 마스터 대기열 이벤트 |
+| 서버 → 개인 | `/user/queue/**` | 개인 알림/에러/시그널링 |
+
+**도메인별 이중 컨트롤러 패턴:**
+- `{Domain}HttpController` — REST API (`@RestController`)
+- `{Domain}StompController` — STOMP 메시지 처리 (`@Controller` + `@MessageMapping`)
+- `{Domain}CommandService` — 상태 변경 트랜잭션 처리
+- `{Domain}EventPublishService` — `SimpMessagingTemplate`으로 이벤트 발행
+
+**방(Room) 상태 전이:**
+`WAITING` → (start) → `ACTIVE` → (end) → `CLOSED`
+
 ### Swagger 작성 규칙
 - 컨트롤러에 Swagger 어노테이션 직접 작성 금지.
 - `domain/{도메인}/docs/{도메인}ControllerDocs.java` 인터페이스에 작성.
@@ -140,7 +175,10 @@ global/
 | `taro_auth` | user_idx(FK), bank_address, bank_type, currency_exchange_rate(default 70) |
 | `taro_payment_history` | payer_idx(FK), recipient_idx(FK), amount, type(taro/destiny), status, memo |
 | `exchange_history` | user_idx(FK), settlement_fee, principal, profits, status |
-| `room` | master_idx(FK), master_nickname, room_name, status(ready/full/active) |
+| `room` | master_idx(FK), master_nickname, room_name, status(WAITING/ACTIVE/CLOSED) |
+| `room_participant` | room_id(FK), user_id(FK), joined_at, left_at |
+| `chat_message` | room_id(FK), sender_id(FK), content, type(TEXT/IMAGE/SYSTEM) |
+| `message_read` | message_id(FK), user_id(FK), read_at |
 | `room_price` | master_idx(FK), title, content(Text), price, discount_price(default 0) |
 
 ## Configuration Notes

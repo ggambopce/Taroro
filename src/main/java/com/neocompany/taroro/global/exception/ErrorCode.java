@@ -17,6 +17,14 @@ public enum ErrorCode {
     // 500 Internal Server Error
     INTERNAL_ERROR(500, HttpStatus.INTERNAL_SERVER_ERROR, "서버가 혼잡 하오니 잠시후 다시 시도해주세요..."),
 
+    // 상담방 관련 에러
+    ROOM_NOT_FOUND(404, HttpStatus.NOT_FOUND, "상담방을 찾을 수 없습니다."),
+    ROOM_ACCESS_DENIED(403, HttpStatus.FORBIDDEN, "상담방 접근 권한이 없습니다."),
+    ROOM_INVALID_STATUS(400, HttpStatus.BAD_REQUEST, "유효하지 않은 상담방 상태입니다."),
+
+    // 메시지 관련 에러
+    MESSAGE_INVALID(400, HttpStatus.BAD_REQUEST, "유효하지 않은 메시지입니다."),
+
     // 페이먼츠 관련 에러
     TOSS_API_HTTP_ERROR(502, HttpStatus.BAD_GATEWAY, "결제 서버 오류."),
     TOSS_API_COMMUNICATION_ERROR(502, HttpStatus.BAD_GATEWAY, "결제 서버 통신 실패."),

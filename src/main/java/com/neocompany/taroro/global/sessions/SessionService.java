@@ -4,9 +4,12 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.neocompany.taroro.domain.users.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SessionService {
 
     private final SessionRepository sessionRepository;
+    private final UserRepository userRepository;
 
     private static final SecureRandom RNG = new SecureRandom();
 
@@ -52,6 +56,28 @@ public class SessionService {
         byte[] bytes = new byte[48];
         RNG.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    /**
+     * SID 쿠키로 세션 검증 후 SessionPrincipal 반환
+     * - 세션 없음 → empty
+     * - 세션 만료 → empty
+     * - 탈퇴 유저 → empty
+     * - 정상 → SessionPrincipal
+     */
+    public Optional<SessionPrincipal> authenticate(String sid) {
+        if (sid == null || sid.isBlank()) return Optional.empty();
+
+        return sessionRepository.findBySessionId(sid)
+                .filter(session -> {
+                    if (session.getExpiresAt().isBefore(Instant.now())) {
+                        log.debug("[SessionAuth] 만료된 세션 sid={}", sid);
+                        return false;
+                    }
+                    return true;
+                })
+                .flatMap(session -> userRepository.findByUserIdAndDeletedFalse(session.getUserId()))
+                .map(user -> new SessionPrincipal(user.getUserId(), user.getEmail(), user.getRoles()));
     }
 
 }
