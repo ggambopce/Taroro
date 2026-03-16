@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.neocompany.taroro.domain.message.docs.MessageControllerDocs;
 import com.neocompany.taroro.domain.message.dto.response.ChatMessageResponse;
 import com.neocompany.taroro.domain.message.service.MessageService;
 import com.neocompany.taroro.global.oauth2.PrincipalDetails;
@@ -17,7 +18,7 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/rooms/{roomId}/messages")
 @RequiredArgsConstructor
-public class MessageHttpController {
+public class MessageHttpController implements MessageControllerDocs {
 
     private final MessageService messageService;
 
@@ -27,6 +28,7 @@ public class MessageHttpController {
      * GET /api/rooms/{roomId}/messages?cursor=123&size=20
      * cursor 없으면 최신 20개, 있으면 해당 id 이전 메시지
      */
+    @Override
     @GetMapping
     public GlobalApiResponse<ChatMessageResponse.PageResult> getMessages(
             @PathVariable Long roomId,

@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.neocompany.taroro.domain.room.docs.RoomControllerDocs;
 import com.neocompany.taroro.domain.room.dto.RoomResponse;
 import com.neocompany.taroro.domain.room.service.RoomService;
 import com.neocompany.taroro.global.oauth2.PrincipalDetails;
@@ -18,11 +19,11 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/rooms")
 @RequiredArgsConstructor
-public class RoomHttpController {
+public class RoomHttpController implements RoomControllerDocs {
 
     private final RoomService roomService;
 
-    /** 방 상세 조회 — 참여자만 가능 */
+    @Override
     @GetMapping("/{roomId}")
     public GlobalApiResponse<RoomResponse> getRoom(@PathVariable Long roomId,
                                                    @AuthenticationPrincipal PrincipalDetails principal) {
@@ -30,7 +31,7 @@ public class RoomHttpController {
                 roomService.getRoom(roomId, principal.getUser().getUserId()));
     }
 
-    /** 내 방 목록 조회 */
+    @Override
     @GetMapping
     public GlobalApiResponse<List<RoomResponse>> getMyRooms(@AuthenticationPrincipal PrincipalDetails principal) {
         return GlobalApiResponse.ok("상담방 목록 조회 성공",
