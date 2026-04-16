@@ -50,24 +50,35 @@ docker-compose up -d
 Package root: `com.neocompany.taroro`
 
 ```
-domain/           # JPA 엔티티 + 레포지토리 (도메인별)
-  users/
+domain/
+  users/          # 회원 인증/가입 — UserController, UserService, UserRepository
     docs/         # Swagger 인터페이스 (컨트롤러 어노테이션 분리)
-  room/           # 상담방 도메인 — HTTP + STOMP 이중 컨트롤러
+  room/           # 상담방 — HTTP + STOMP 이중 컨트롤러, 상태 머신
+    docs/         # RoomControllerDocs
   message/        # 채팅 메시지, 읽음 처리, 타이핑 이벤트
-  notification/   # 사용자 알림 이벤트 발행
-  signaling/      # WebRTC 시그널링 이벤트
+    docs/         # MessageControllerDocs
+  master/         # 마스터 온라인 상태 STOMP 브로드캐스트
+  notification/   # 개인 알림 이벤트 발행 (UserEventPublishService)
+  signaling/      # WebRTC 시그널링 STOMP 라우팅
+  point/          # 포인트 충전 (Toss Payments PG 연동)
+  image/          # S3 프로필 이미지 업로드
+  email/          # 이메일 인증코드 (인메모리 저장, SMTP)
+  toss/           # TossPaymentsClient (외부 HTTP 클라이언트)
 global/
+  entity/         # BaseTimeEntity (@MappedSuperclass — createdAt/updatedAt)
   config/
-    swagger/      # SwaggerConfig — OpenAPI 전역 설정
+    swagger/      # SwaggerConfig
   security/       # SecurityConfig — 필터 체인
   sessions/       # Session 엔티티, SessionRepository, SessionService
                   # SessionAuthenticationFilter, SessionCookieUtil
+                  # SessionPrincipal (WebSocket용 java.security.Principal 구현)
   oauth2/         # CustomOauth2UserService, handlers, provider별 UserInfo
+                  # PrincipalDetails (HTTP SecurityContext용)
   exception/      # GlobalExceptionHandler, BusinessException, ErrorCode
-  response/       # ApiResponse<T> — 모든 응답 공통 래퍼
+  response/       # GlobalApiResponse<T> — 모든 응답 공통 래퍼
   websocket/      # WebSocketHandshakeInterceptor, PrincipalHandshakeHandler
                   # StompChannelInterceptor, StompExceptionHandler
+                  # StompDestination (destination 상수), StompEventPublisher
 ```
 
 ## Key Architectural Patterns
@@ -124,20 +135,29 @@ global/
 2. `PrincipalHandshakeHandler` — 속성에서 Principal 생성
 3. `StompChannelInterceptor` — STOMP 프레임별 권한 검사 (CONNECT/SUBSCRIBE/SEND)
 
-**Destination 패턴:**
+**Destination 패턴 (`StompDestination.java` 참조):**
 | 방향 | 패턴 | 용도 |
 |---|---|---|
 | 클라이언트 → 서버 | `/app/rooms/{roomId}/enter\|leave\|start\|end` | 방 상태 명령 |
 | 클라이언트 → 서버 | `/app/rooms/{roomId}/messages\|read\|typing` | 채팅 명령 |
-| 서버 → 구독자 | `/topic/room.{roomId}` | 방/메시지 이벤트 브로드캐스트 |
-| 서버 → 구독자 | `/topic/waiting.{masterId}` | 마스터 대기열 이벤트 |
-| 서버 → 개인 | `/user/queue/**` | 개인 알림/에러/시그널링 |
+| 클라이언트 → 서버 | `/app/rooms/{roomId}/signal/offer\|answer\|ice` | WebRTC 시그널링 |
+| 클라이언트 → 서버 | `/app/masters/status` | 마스터 가용 상태 변경 |
+| 서버 → 구독자 | `/topic/rooms/{roomId}` | 방/메시지 이벤트 브로드캐스트 |
+| 서버 → 구독자 | `/topic/waiting-room` | 대기열 이벤트 |
+| 서버 → 구독자 | `/topic/masters/status` | 마스터 상태 변경 브로드캐스트 |
+| 서버 → 개인 | `/user/{id}/queue/events` | 개인 알림 |
+| 서버 → 개인 | `/user/{id}/queue/signaling` | WebRTC 시그널링 수신 |
+| 서버 → 개인 | `/user/{id}/queue/errors` | 개인 에러 알림 |
 
 **도메인별 이중 컨트롤러 패턴:**
-- `{Domain}HttpController` — REST API (`@RestController`)
-- `{Domain}StompController` — STOMP 메시지 처리 (`@Controller` + `@MessageMapping`)
+- `{Domain}HttpController` — REST API (`@RestController`), `@AuthenticationPrincipal PrincipalDetails`로 사용자 식별
+- `{Domain}StompController` — STOMP 메시지 처리 (`@Controller` + `@MessageMapping`), `(SessionPrincipal) principal`로 사용자 식별
 - `{Domain}CommandService` — 상태 변경 트랜잭션 처리
-- `{Domain}EventPublishService` — `SimpMessagingTemplate`으로 이벤트 발행
+- `{Domain}EventPublishService` — `StompEventPublisher`로 이벤트 발행
+
+**두 Principal 타입:**
+- `PrincipalDetails` — HTTP 요청용. Spring Security `SecurityContext`에 저장. `SessionAuthenticationFilter`가 세팅.
+- `SessionPrincipal` — WebSocket/STOMP용. `WebSocketHandshakeInterceptor`가 핸드셰이크 시 세팅. `getName()`은 `String.valueOf(userId)`.
 
 **방(Room) 상태 전이:**
 `WAITING` → (start) → `ACTIVE` → (end) → `CLOSED`
@@ -149,9 +169,10 @@ global/
 - 접근 URL: `https://taro.neocompany.co.kr/api/swagger` (로컬: `http://localhost:8080/swagger`)
 
 ### Endpoint Security Tiers (`SecurityConfig`)
-- **Public:** Swagger, OAuth2 경로, `/api/auth/login`, `/api/auth/signup`, `/api/auth/logout`
-- **Authenticated (`ROLE_USER`):** `/api/auth/me`, `/api/auth/withdraw`, `/api/members/**`, `/api/orders/**`, `/api/payments/**`
-- **Admin (`ROLE_ADMIN`):** `/api/admin/**`
+- **Public:** Swagger, OAuth2 경로, 정적 파일, `/api/auth/login`, `/api/auth/signup`, `/api/auth/logout`, `/api/auth/email/**`, `/api/auth/password/reset`, `anyRequest().permitAll()` (나머지도 기본 허용)
+- **Authenticated:** `/api/auth/me`, `/api/auth/withdraw`, `/api/point/charge/toss/**`
+- **Admin (`ROLE_ADMIN`):** `/api/admin/**`, `/api/support/posts/answer/**`
+- **WebSocket:** `/ws/chat`, `/ws/chat-raw` — `StompChannelInterceptor`에서 별도 인증 (SID 쿠키)
 
 ### CORS (`CorsConfig`)
 - **운영:** `https://taro.neocompany.co.kr` — credentials 허용
@@ -163,8 +184,9 @@ global/
 
 - **DDL:** `spring.jpa.hibernate.ddl-auto=update` — 부팅 시 스키마 자동 반영
 - **Timezone:** `Asia/Seoul`
-- 모든 테이블 공통 컬럼: `idx` (PK, BIGINT UNSIGNED), `created_at`, `updated_at`
+- 모든 엔티티는 `BaseTimeEntity` (`global/entity/`) 상속 → `createdAt`, `updatedAt` 자동 관리
 - `User.deleted` + `User.deletedAt` — 소프트 삭제 (탈퇴 시 email에 `deleted-` 접두사)
+- `User.is_taro_master` 필드의 Lombok getter는 `is_taro_master()` (boolean 필드명 그대로, `is` 접두사 미추가)
 
 ## DB 테이블 설계
 
@@ -186,3 +208,5 @@ global/
 - OAuth2 클라이언트 시크릿은 `application.yml`에 있음 (운영 시 환경변수로 분리 필요)
 - Redis (`localhost:6379`), SMTP (Gmail) 설정 존재하나 현재 미사용
 - Toss Payments 시크릿 키는 `application.yml`의 `toss.*` 항목
+- `StompExceptionHandler`는 `@Qualifier("subProtocolWebSocketHandler") WebSocketHandler`로 주입받아 `SubProtocolWebSocketHandler`로 캐스팅 — Spring이 해당 빈을 `WebSocketHandler` 타입으로 등록하기 때문
+- `@Transactional(readOnly = true)`는 반드시 `org.springframework.transaction.annotation.Transactional` 사용 (`jakarta.transaction.Transactional`은 `readOnly` 속성 없음)
