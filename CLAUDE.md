@@ -12,6 +12,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build
 ./gradlew build
 
+# Build (skip tests)
+./gradlew build -x test
+
 # Run
 ./gradlew bootRun
 
@@ -21,8 +24,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Test (single class)
 ./gradlew test --tests "com.neocompany.taroro.SomeTest"
 
+# Compile check only
+./gradlew compileJava
+
 # Start MySQL (required before running the app)
 docker-compose up -d
+
+# Deploy to server (PowerShell)
+./gradlew build -x test; if ($LASTEXITCODE -eq 0) { scp -i "C:\Users\core\.ssh\neo_key" build/libs/taroro-0.0.1.jar bitnami@13.124.215.178:~/taroro/release/ }
 ```
 
 ## Stack
@@ -57,7 +66,22 @@ domain/
     docs/         # RoomControllerDocs
   message/        # 채팅 메시지, 읽음 처리, 타이핑 이벤트
     docs/         # MessageControllerDocs
-  master/         # 마스터 온라인 상태 STOMP 브로드캐스트
+  master/         # 마스터 온라인 상태 STOMP 브로드캐스트 (MasterStatusService)
+  taromaster/     # 타로 마스터 등록/조회/수정 — HTTP REST
+    entity/       # TaroMaster, MasterStatus(enum), ApprovalStatus(enum)
+    docs/         # TaroMasterControllerDocs
+  tarocardset/    # 타로 카드 세트 CRUD — HTTP REST
+    entity/       # TaroCardSet (소프트 삭제)
+    docs/         # TaroCardSetControllerDocs
+  tarocard/       # 타로 카드 CRUD — HTTP REST
+    entity/       # TaroCard, ArcanaType(enum), SuitType(enum)
+    docs/         # TaroCardControllerDocs
+  masterplan/     # 마스터 상담 플랜 CRUD — HTTP REST
+    entity/       # MasterPlan (소프트 삭제, discountedPrice 도메인 메서드)
+    docs/         # MasterPlanControllerDocs
+  masterauth/     # 마스터 정산 계좌 + PASS 본인인증 — HTTP REST
+    entity/       # MasterSettlement, MasterVerification
+    docs/         # MasterAuthControllerDocs
   notification/   # 개인 알림 이벤트 발행 (UserEventPublishService)
   signaling/      # WebRTC 시그널링 STOMP 라우팅
   point/          # 포인트 충전 (Toss Payments PG 연동)
@@ -66,6 +90,8 @@ domain/
   toss/           # TossPaymentsClient (외부 HTTP 클라이언트)
 global/
   entity/         # BaseTimeEntity (@MappedSuperclass — createdAt/updatedAt)
+  converter/      # StringListConverter — List<String> ↔ TEXT (쉼표 구분)
+  dto/            # PageResult<T> record — 목록 조회 공통 래퍼 (items/limit/offset/hasNext)
   config/
     swagger/      # SwaggerConfig
   security/       # SecurityConfig — 필터 체인
@@ -187,6 +213,7 @@ global/
 - 모든 엔티티는 `BaseTimeEntity` (`global/entity/`) 상속 → `createdAt`, `updatedAt` 자동 관리
 - `User.deleted` + `User.deletedAt` — 소프트 삭제 (탈퇴 시 email에 `deleted-` 접두사)
 - `User.is_taro_master` 필드의 Lombok getter는 `is_taro_master()` (boolean 필드명 그대로, `is` 접두사 미추가)
+- `List<String>` 필드는 `@Convert(converter = StringListConverter.class)` + `TEXT` 컬럼으로 쉼표 구분 저장
 
 ## DB 테이블 설계
 
@@ -202,6 +229,12 @@ global/
 | `chat_message` | room_id(FK), sender_id(FK), content, type(TEXT/IMAGE/SYSTEM) |
 | `message_read` | message_id(FK), user_id(FK), read_at |
 | `room_price` | master_idx(FK), title, content(Text), price, discount_price(default 0) |
+| `taro_master` | user_id(unique), display_name, intro(TEXT), profile_image_url, specialties(TEXT), career_years, status(ONLINE/BUSY/BREAK/OFFLINE), approval_status(PENDING/APPROVED/REJECTED), is_public |
+| `taro_card_set` | master_id(FK), set_name, set_description(TEXT), brand_name, publisher_name, cover_image_url, card_count, is_active, is_public, deleted, deleted_at |
+| `taro_card` | set_id(FK), master_id(FK), card_name, card_number, arcana_type(MAJOR/MINOR), suit(WANDS/CUPS/SWORDS/PENTACLES, nullable), keywords(TEXT), card_description(TEXT), upright_meaning(TEXT), reversed_meaning(TEXT), image_url, is_active, deleted, deleted_at |
+| `master_plan` | master_id(FK), plan_name, plan_description(TEXT), counseling_minutes, price, discount_rate(0~100), is_active, is_public, deleted, deleted_at |
+| `master_settlement` | master_id(unique), bank_name, account_number, account_holder_name, phone, email, is_verified_account |
+| `master_verification` | master_id(unique), is_identity_verified, is_pass_verified, verification_status(NONE/PENDING/VERIFIED/REJECTED), pass_verified_at, identity_verified_at, reject_reason(TEXT) |
 
 ## Configuration Notes
 

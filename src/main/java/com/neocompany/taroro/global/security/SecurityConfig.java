@@ -65,6 +65,9 @@ public class SecurityConfig {
                                 "/img/**"
                         ).permitAll()
                         .requestMatchers(
+                                "/api/admin/auth/login"
+                        ).permitAll()
+                        .requestMatchers(
                                 "/api/admin/**",
                                 "/api/support/posts/answer/**"
                         ).hasRole("ADMIN")

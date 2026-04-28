@@ -11,6 +11,7 @@ public class TaroCardSetResponse {
 
     private final Long setId;
     private final Long masterId;
+    private String masterName;
     private final String setName;
     private final String setDescription;
     private final String brandName;
@@ -35,5 +36,10 @@ public class TaroCardSetResponse {
         this.isPublic = set.isPublic();
         this.createdAt = set.getCreatedAt();
         this.updatedAt = set.getUpdatedAt();
+    }
+
+    public TaroCardSetResponse withMasterName(String masterName) {
+        this.masterName = masterName;
+        return this;
     }
 }

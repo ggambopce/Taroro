@@ -56,4 +56,10 @@ public class TaroCardSetQueryService {
                 slice.getContent().stream().map(TaroCardSetResponse::new).toList(),
                 limit, offset, slice.hasNext());
     }
+
+    public TaroCardSetResponse getSetForAdmin(Long setId) {
+        TaroCardSet set = cardSetRepository.findBySetIdAndDeletedFalse(setId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.CARD_SET_NOT_FOUND));
+        return new TaroCardSetResponse(set);
+    }
 }

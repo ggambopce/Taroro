@@ -53,6 +53,21 @@ public class UserService {
         SessionCookieUtil.writeSidCookies(res, sid, SECURE_COOKIE);
     }
 
+    @Transactional
+    public void adminLogin(LoginRequestDto req, HttpServletResponse res) {
+        User user = verifyCredentials(req);
+
+        if (user.isDeleted()) {
+            throw new BusinessException(ErrorCode.INVALID_REQUEST, "탈퇴한 계정입니다.");
+        }
+        if (!user.getRoles().contains("ROLE_ADMIN")) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "관리자 권한이 없습니다.");
+        }
+
+        String sid = sessionService.createSession(user.getUserId(), SESSION_TTL);
+        SessionCookieUtil.writeSidCookies(res, sid, SECURE_COOKIE);
+    }
+
     /**
      * 비밀번호와 디비 비밀번호 일치 확인
      */

@@ -33,4 +33,17 @@ public interface TaroMasterRepository extends JpaRepository<TaroMaster, Long> {
             @Param("keyword") String keyword,
             @Param("status") MasterStatus status,
             Pageable pageable);
+
+    @Query("""
+            SELECT m FROM TaroMaster m
+            WHERE (:keyword IS NULL
+                   OR m.displayName LIKE %:keyword%
+                   OR m.intro LIKE %:keyword%)
+              AND (:status IS NULL OR m.status = :status)
+            ORDER BY m.createdAt DESC
+            """)
+    Slice<TaroMaster> findAllMasters(
+            @Param("keyword") String keyword,
+            @Param("status") MasterStatus status,
+            Pageable pageable);
 }
