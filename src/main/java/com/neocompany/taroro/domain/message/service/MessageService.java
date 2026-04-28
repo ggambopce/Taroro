@@ -1,6 +1,9 @@
 package com.neocompany.taroro.domain.message.service;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
@@ -8,9 +11,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.neocompany.taroro.domain.message.dto.response.ChatMessageResponse;
+import com.neocompany.taroro.domain.message.entity.ChatMessage;
+import com.neocompany.taroro.domain.message.entity.MessageRead;
 import com.neocompany.taroro.domain.message.repository.ChatMessageRepository;
+import com.neocompany.taroro.domain.message.repository.MessageReadRepository;
 import com.neocompany.taroro.domain.room.entity.Room;
 import com.neocompany.taroro.domain.room.repository.RoomRepository;
+import com.neocompany.taroro.domain.users.User;
+import com.neocompany.taroro.domain.users.UserRepository;
 import com.neocompany.taroro.global.exception.BusinessException;
 import com.neocompany.taroro.global.exception.ErrorCode;
 
@@ -24,13 +32,10 @@ public class MessageService {
     private static final int DEFAULT_PAGE_SIZE = 20;
 
     private final ChatMessageRepository messageRepository;
+    private final MessageReadRepository messageReadRepository;
     private final RoomRepository roomRepository;
+    private final UserRepository userRepository;
 
-    /**
-     * 방 메시지 목록 조회 (커서 기반 페이징)
-     *
-     * @param cursorId null 이면 최신부터, 값이 있으면 해당 id 이전 메시지
-     */
     public ChatMessageResponse.PageResult getMessages(Long roomId, Long requesterId, Long cursorId, int size) {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROOM_NOT_FOUND));
@@ -42,17 +47,33 @@ public class MessageService {
         int pageSize = (size > 0 && size <= 100) ? size : DEFAULT_PAGE_SIZE;
         PageRequest pageRequest = PageRequest.of(0, pageSize);
 
-        Slice<ChatMessageResponse> slice;
+        Slice<ChatMessage> slice;
         if (cursorId == null) {
-            slice = messageRepository.findByRoomIdOrderByIdDesc(roomId, pageRequest)
-                    .map(ChatMessageResponse::new);
+            slice = messageRepository.findByRoomIdOrderByIdDesc(roomId, pageRequest);
         } else {
-            slice = messageRepository.findByRoomIdAndIdLessThanOrderByIdDesc(roomId, cursorId, pageRequest)
-                    .map(ChatMessageResponse::new);
+            slice = messageRepository.findByRoomIdAndIdLessThanOrderByIdDesc(roomId, cursorId, pageRequest);
         }
 
-        List<ChatMessageResponse> messages = slice.getContent();
-        return new ChatMessageResponse.PageResult(messages, slice.hasNext());
+        List<ChatMessage> messages = slice.getContent();
+
+        // 배치: 발신자 이름 조회
+        Set<Long> senderIds = messages.stream().map(ChatMessage::getSenderId).collect(Collectors.toSet());
+        Map<Long, String> nameMap = userRepository.findAllByUserIdIn(senderIds).stream()
+                .collect(Collectors.toMap(User::getUserId, u -> u.getName() != null ? u.getName() : ""));
+
+        // 배치: 읽음 기록 조회 (readCount 계산용)
+        List<MessageRead> reads = messageReadRepository.findByRoomId(roomId);
+
+        List<ChatMessageResponse> responseList = messages.stream().map(msg -> {
+            String senderName = nameMap.getOrDefault(msg.getSenderId(), "");
+            String senderRole = msg.getSenderId().equals(room.getMasterId()) ? "MASTER" : "USER";
+            long readCount = reads.stream()
+                    .filter(r -> r.getLastReadMessageId() >= msg.getId())
+                    .count();
+            return new ChatMessageResponse(msg, senderName, senderRole, readCount);
+        }).toList();
+
+        return new ChatMessageResponse.PageResult(roomId, responseList, slice.hasNext());
     }
 
     private boolean isParticipant(Room room, Long userId) {

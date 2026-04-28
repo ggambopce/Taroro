@@ -11,33 +11,41 @@ import lombok.Getter;
 @Getter
 public class ChatMessageResponse {
 
-    private final Long id;
+    private final Long messageId;
     private final Long roomId;
     private final Long senderId;
-    private final String content;
+    private final String senderName;
+    private final String senderRole;  // MASTER or USER
     private final MessageType messageType;
+    private final String content;
     private final Instant createdAt;
+    private final long readCount;
 
-    public ChatMessageResponse(ChatMessage message) {
-        this.id = message.getId();
-        this.roomId = message.getRoomId();
-        this.senderId = message.getSenderId();
-        this.content = message.getContent();
-        this.messageType = message.getMessageType();
-        this.createdAt = message.getCreatedAt();
+    public ChatMessageResponse(ChatMessage msg, String senderName, String senderRole, long readCount) {
+        this.messageId = msg.getId();
+        this.roomId = msg.getRoomId();
+        this.senderId = msg.getSenderId();
+        this.senderName = senderName;
+        this.senderRole = senderRole;
+        this.messageType = msg.getMessageType();
+        this.content = msg.getContent();
+        this.createdAt = msg.getCreatedAt();
+        this.readCount = readCount;
     }
 
     @Getter
     public static class PageResult {
+        private final Long roomId;
         private final List<ChatMessageResponse> messages;
         private final boolean hasNext;
         private final Long nextCursor;
 
-        public PageResult(List<ChatMessageResponse> messages, boolean hasNext) {
+        public PageResult(Long roomId, List<ChatMessageResponse> messages, boolean hasNext) {
+            this.roomId = roomId;
             this.messages = messages;
             this.hasNext = hasNext;
             this.nextCursor = hasNext && !messages.isEmpty()
-                    ? messages.get(messages.size() - 1).getId()
+                    ? messages.get(messages.size() - 1).getMessageId()
                     : null;
         }
     }

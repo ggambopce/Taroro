@@ -65,7 +65,8 @@ public class SecurityConfig {
                                 "/img/**"
                         ).permitAll()
                         .requestMatchers(
-                                "/api/admin/auth/login"
+                                "/api/admin/auth/login",
+                                "/api/waiting-room"
                         ).permitAll()
                         .requestMatchers(
                                 "/api/admin/**",
