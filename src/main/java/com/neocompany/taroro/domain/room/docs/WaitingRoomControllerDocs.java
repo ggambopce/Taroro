@@ -34,7 +34,7 @@ public interface WaitingRoomControllerDocs {
                       "success": true,
                       "message": "대기열 조회 성공",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "waitingCount": 3,
                         "items": [
                           {

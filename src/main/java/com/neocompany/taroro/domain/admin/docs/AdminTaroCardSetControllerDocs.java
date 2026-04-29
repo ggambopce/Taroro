@@ -36,7 +36,7 @@ public interface AdminTaroCardSetControllerDocs {
                       "success": true,
                       "message": "카드 세트 목록",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "items": [
                           {
                             "setId": 1,
@@ -82,7 +82,7 @@ public interface AdminTaroCardSetControllerDocs {
                       "success": true,
                       "message": "카드 세트 상세",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "setId": 1,
                         "masterId": 1,
                         "setName": "라이더-웨이트 타로",
@@ -120,7 +120,7 @@ public interface AdminTaroCardSetControllerDocs {
                       "success": true,
                       "message": "내 카드 세트 목록",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "items": [],
                         "limit": 20,
                         "offset": 0,

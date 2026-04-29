@@ -37,7 +37,7 @@ public interface MessageControllerDocs {
                       "success": true,
                       "message": "이전 메시지 조회 성공",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "roomId": 1,
                         "messages": [
                           {
@@ -75,7 +75,7 @@ public interface MessageControllerDocs {
                       "success": true,
                       "message": "이전 메시지 조회 성공",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "roomId": 1,
                         "messages": [],
                         "hasNext": false,

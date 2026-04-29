@@ -37,7 +37,7 @@ public interface RoomControllerDocs {
                       "success": true,
                       "message": "상담방 생성 성공",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "id": 1,
                         "masterId": 10,
                         "masterName": "타로마스터홍길동",
@@ -79,7 +79,7 @@ public interface RoomControllerDocs {
                       "success": true,
                       "message": "상담방 조회 성공",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "id": 1,
                         "masterId": 10,
                         "masterName": "타로마스터홍길동",
@@ -134,7 +134,7 @@ public interface RoomControllerDocs {
                       "success": true,
                       "message": "상담방 목록 조회 성공",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "items": [
                           {
                             "id": 1,

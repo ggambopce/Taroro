@@ -33,7 +33,7 @@ public interface AdminTaroCardControllerDocs {
                       "success": true,
                       "message": "카드 목록",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "items": [
                           {
                             "cardId": 1,
@@ -73,7 +73,7 @@ public interface AdminTaroCardControllerDocs {
                       "success": true,
                       "message": "카드 상세",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "cardId": 1,
                         "setId": 1,
                         "masterId": 1,

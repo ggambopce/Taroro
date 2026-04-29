@@ -71,7 +71,7 @@ public interface AdminAuthControllerDocs {
                       "success": true,
                       "message": "로그인 관리자 정보",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "email": "admin@example.com",
                         "loginType": "normal",
                         "userName": "관리자",

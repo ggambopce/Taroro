@@ -35,7 +35,7 @@ public interface AdminTaroMasterControllerDocs {
                       "success": true,
                       "message": "마스터 목록",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "items": [
                           {
                             "masterId": 1,
@@ -79,7 +79,7 @@ public interface AdminTaroMasterControllerDocs {
                       "success": true,
                       "message": "마스터 상세",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "masterId": 1,
                         "userId": 10,
                         "displayName": "타로마스터홍길동",
@@ -130,7 +130,7 @@ public interface AdminTaroMasterControllerDocs {
                       "success": true,
                       "message": "마스터 승인 완료",
                       "statusCode": 200,
-                      "result": {
+                      "data": {
                         "masterId": 1,
                         "approvalStatus": "APPROVED",
                         "displayName": "타로마스터홍길동"
