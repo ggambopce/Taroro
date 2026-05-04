@@ -2,7 +2,6 @@ package com.neocompany.taroro.domain.room.service;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -15,6 +14,7 @@ import com.neocompany.taroro.domain.message.entity.ChatMessage;
 import com.neocompany.taroro.domain.message.entity.MessageRead;
 import com.neocompany.taroro.domain.message.repository.ChatMessageRepository;
 import com.neocompany.taroro.domain.message.repository.MessageReadRepository;
+import com.neocompany.taroro.domain.message.service.UnreadCountService;
 import com.neocompany.taroro.domain.room.dto.RoomDetailResponse;
 import com.neocompany.taroro.domain.room.dto.RoomSummaryResponse;
 import com.neocompany.taroro.domain.room.dto.WaitingRoomResponse;
@@ -42,6 +42,8 @@ public class RoomService {
     private final ChatMessageRepository chatMessageRepository;
     private final MessageReadRepository messageReadRepository;
     private final UserRepository userRepository;
+    private final OnlineStatusService onlineStatusService;
+    private final UnreadCountService unreadCountService;
 
     public RoomDetailResponse getRoomDetail(Long roomId, Long requesterId) {
         Room room = roomRepository.findById(roomId)
@@ -52,12 +54,12 @@ public class RoomService {
 
         List<RoomParticipant> participants = participantRepository.findByRoomId(roomId);
 
-        // 배치: 참여자 이름 조회
-        Set<Long> userIds = participants.stream().map(RoomParticipant::getUserId).collect(Collectors.toSet());
+        List<Long> userIds = participants.stream().map(RoomParticipant::getUserId).toList();
         Map<Long, String> userNameMap = userRepository.findAllByUserIdIn(userIds).stream()
                 .collect(Collectors.toMap(User::getUserId, u -> u.getName() != null ? u.getName() : ""));
+        Map<Long, Boolean> onlineMap = onlineStatusService.isOnlineBatch(userIds);
 
-        return RoomDetailResponse.of(room, participants, userNameMap);
+        return RoomDetailResponse.of(room, participants, userNameMap, onlineMap);
     }
 
     public PageResult<RoomSummaryResponse> getMyRooms(Long userId, int limit, int offset) {
@@ -70,10 +72,14 @@ public class RoomService {
         Map<Long, Long> lastReadMap = messageReadRepository.findByUserIdAndRoomIdIn(userId, roomIds)
                 .stream().collect(Collectors.toMap(MessageRead::getRoomId, MessageRead::getLastReadMessageId));
 
+        Map<Long, Long> cachedUnread = unreadCountService.getBatch(userId, roomIds);
+
         List<RoomSummaryResponse> items = rooms.stream().map(room -> {
             ChatMessage lastMsg = lastMsgMap.get(room.getId());
             long lastReadId = lastReadMap.getOrDefault(room.getId(), 0L);
-            long unread = chatMessageRepository.countByRoomIdAndIdGreaterThan(room.getId(), lastReadId);
+            long cached = cachedUnread.getOrDefault(room.getId(), -1L);
+            long unread = cached >= 0 ? cached
+                    : chatMessageRepository.countByRoomIdAndIdGreaterThan(room.getId(), lastReadId);
             return RoomSummaryResponse.of(room, lastMsg, unread);
         }).toList();
 

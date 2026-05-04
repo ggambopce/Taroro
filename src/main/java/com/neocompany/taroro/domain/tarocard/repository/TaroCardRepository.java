@@ -1,5 +1,7 @@
 package com.neocompany.taroro.domain.tarocard.repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
@@ -13,6 +15,8 @@ import com.neocompany.taroro.domain.tarocard.entity.TaroCard;
 public interface TaroCardRepository extends JpaRepository<TaroCard, Long> {
 
     Optional<TaroCard> findByCardIdAndDeletedFalse(Long cardId);
+
+    List<TaroCard> findByCardIdInAndDeletedFalse(Collection<Long> cardIds);
 
     @Query("""
             SELECT c FROM TaroCard c

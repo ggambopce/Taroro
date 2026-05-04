@@ -63,8 +63,14 @@ domain/
   users/          # 회원 인증/가입 — UserController, UserService, UserRepository
     docs/         # Swagger 인터페이스 (컨트롤러 어노테이션 분리)
   room/           # 상담방 — HTTP + STOMP 이중 컨트롤러, 상태 머신
-    docs/         # RoomControllerDocs
+    controller/   # RoomHttpController (CRUD), WaitingRoomHttpController (/api/waiting-room 공개)
+    dto/          # CreateRoomRequest, UpdateRoomRequest, RoomDetailResponse, RoomSummaryResponse
+                  # WaitingRoomResponse (waitingCount + List<WaitingRoomItem>)
+                  # ParticipantInfo record (userId, userName, role, isOnline)
+    docs/         # RoomControllerDocs, WaitingRoomControllerDocs
   message/        # 채팅 메시지, 읽음 처리, 타이핑 이벤트
+    dto/response/ # ChatMessageResponse: messageId, roomId, senderId, senderName, senderRole, messageType,
+                  #   content, createdAt, readCount — PageResult 내 roomId, hasNext, nextCursor 포함
     docs/         # MessageControllerDocs
   master/         # 마스터 온라인 상태 STOMP 브로드캐스트 (MasterStatusService)
   taromaster/     # 타로 마스터 등록/조회/수정 — HTTP REST
@@ -137,11 +143,11 @@ global/
 | 잘못된 경로 | 404 | 404 | false |
 | 서버 에러 | 500 | 502 | false |
 
-### API 공통 응답 형식 (`ApiResponse<T>`)
+### API 공통 응답 형식 (`GlobalApiResponse<T>`)
 
 ```json
 // 성공
-{ "success": true, "message": "...", "statusCode": 200, "result": { ... } }
+{ "success": true, "message": "...", "statusCode": 200, "data": { ... } }
 
 // 실패 (비즈니스/유효성)
 { "success": false, "message": "...", "statusCode": 201 }
@@ -153,7 +159,7 @@ global/
 { "success": false, "message": "서버가 혼잡 하오니 잠시후 다시 시도해주세요...", "statusCode": 502 }
 ```
 
-- `result`는 `null`이면 JSON에서 제외 (`@JsonInclude(NON_NULL)`)
+- `data`는 `null`이면 JSON에서 제외 (`@JsonInclude(NON_NULL)`)
 - 모든 리스트 조회는 `limit`(기본 20), `offset` 쿼리 파라미터 지원
 
 ### STOMP WebSocket Architecture
@@ -192,7 +198,13 @@ global/
 - `SessionPrincipal` — WebSocket/STOMP용. `WebSocketHandshakeInterceptor`가 핸드셰이크 시 세팅. `getName()`은 `String.valueOf(userId)`.
 
 **방(Room) 상태 전이:**
-`WAITING` → (start) → `ACTIVE` → (end) → `CLOSED`
+`WAITING` → (start) → `ACTIVE` → (end/close) → `CLOSED`
+`WAITING` → (close) → `CLOSED` (마스터가 직접 종료)
+
+**Room 엔티티 주요 필드:**
+- `masterId`: 마스터의 **User ID** (TaroMaster PK 아님) — `createByMaster()`에서 `userId`와 동일값 세팅
+- `roomName`, `masterName`: 방 생성 시 TaroMaster.displayName 스냅샷
+- `senderRole` 판별: `senderId.equals(room.getMasterId())` → "MASTER" else "USER"
 
 ### Swagger 작성 규칙
 - 컨트롤러에 Swagger 어노테이션 직접 작성 금지.
@@ -209,7 +221,7 @@ global/
 - `TaroCardSetResponse.masterName` — 기본 null, `withMasterName()` 빌더 메서드로 세팅. `@JsonInclude(NON_NULL)` 적용으로 일반 조회에서는 JSON 미노출
 
 ### Endpoint Security Tiers (`SecurityConfig`)
-- **Public:** Swagger, OAuth2 경로, 정적 파일, `/api/auth/login`, `/api/auth/signup`, `/api/auth/logout`, `/api/auth/email/**`, `/api/auth/password/reset`, `/api/admin/auth/login`, `anyRequest().permitAll()` (나머지도 기본 허용)
+- **Public:** Swagger, OAuth2 경로, 정적 파일, `/api/auth/login`, `/api/auth/signup`, `/api/auth/logout`, `/api/auth/email/**`, `/api/auth/password/reset`, `/api/admin/auth/login`, `/api/waiting-room`, `anyRequest().permitAll()` (나머지도 기본 허용)
 - **Authenticated:** `/api/auth/me`, `/api/auth/withdraw`, `/api/point/charge/toss/**`
 - **Admin (`ROLE_ADMIN`):** `/api/admin/**` (단, `/api/admin/auth/login` 제외), `/api/support/posts/answer/**`
 - **WebSocket:** `/ws/chat`, `/ws/chat-raw` — `StompChannelInterceptor`에서 별도 인증 (SID 쿠키)
@@ -238,10 +250,10 @@ global/
 | `taro_auth` | user_idx(FK), bank_address, bank_type, currency_exchange_rate(default 70) |
 | `taro_payment_history` | payer_idx(FK), recipient_idx(FK), amount, type(taro/destiny), status, memo |
 | `exchange_history` | user_idx(FK), settlement_fee, principal, profits, status |
-| `room` | master_idx(FK), master_nickname, room_name, status(WAITING/ACTIVE/CLOSED) |
-| `room_participant` | room_id(FK), user_id(FK), joined_at, left_at |
+| `room` | master_id(FK→user), master_name, room_name, status(WAITING/ACTIVE/CLOSED), started_at, ended_at |
+| `room_participant` | room_id(FK), user_id(FK), is_online, joined_at, left_at |
 | `chat_message` | room_id(FK), sender_id(FK), content, type(TEXT/IMAGE/SYSTEM) |
-| `message_read` | message_id(FK), user_id(FK), read_at |
+| `message_read` | room_id(FK), user_id(FK), last_read_message_id — 방별 마지막 읽음 메시지 ID |
 | `room_price` | master_idx(FK), title, content(Text), price, discount_price(default 0) |
 | `taro_master` | user_id(unique), display_name, intro(TEXT), profile_image_url, specialties(TEXT), career_years, status(ONLINE/BUSY/BREAK/OFFLINE), approval_status(PENDING/APPROVED/REJECTED), is_public |
 | `taro_card_set` | master_id(FK), set_name, set_description(TEXT), brand_name, publisher_name, cover_image_url, card_count, is_active, is_public, deleted, deleted_at |

@@ -3,6 +3,8 @@ package com.neocompany.taroro.domain.message.dto.response;
 import java.time.Instant;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.neocompany.taroro.domain.message.entity.ChatMessage;
 import com.neocompany.taroro.domain.message.entity.MessageType;
 
@@ -30,6 +32,28 @@ public class ChatMessageResponse {
         this.messageType = msg.getMessageType();
         this.content = msg.getContent();
         this.createdAt = msg.getCreatedAt();
+        this.readCount = readCount;
+    }
+
+    @JsonCreator
+    public ChatMessageResponse(
+            @JsonProperty("messageId") Long messageId,
+            @JsonProperty("roomId") Long roomId,
+            @JsonProperty("senderId") Long senderId,
+            @JsonProperty("senderName") String senderName,
+            @JsonProperty("senderRole") String senderRole,
+            @JsonProperty("messageType") MessageType messageType,
+            @JsonProperty("content") String content,
+            @JsonProperty("createdAt") Instant createdAt,
+            @JsonProperty("readCount") long readCount) {
+        this.messageId = messageId;
+        this.roomId = roomId;
+        this.senderId = senderId;
+        this.senderName = senderName;
+        this.senderRole = senderRole;
+        this.messageType = messageType;
+        this.content = content;
+        this.createdAt = createdAt;
         this.readCount = readCount;
     }
 

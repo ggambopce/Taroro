@@ -3,6 +3,7 @@ package com.neocompany.taroro.domain.room.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.neocompany.taroro.domain.message.service.MessageCacheService;
 import com.neocompany.taroro.domain.room.dto.CreateRoomRequest;
 import com.neocompany.taroro.domain.room.dto.UpdateRoomRequest;
 import com.neocompany.taroro.domain.room.dto.event.RoomEvent;
@@ -30,6 +31,7 @@ public class RoomCommandService {
     private final RoomRepository roomRepository;
     private final RoomParticipantRepository participantRepository;
     private final TaroMasterRepository masterRepository;
+    private final MessageCacheService messageCacheService;
 
     public Room create(Long userId, CreateRoomRequest request) {
         TaroMaster master = masterRepository.findByUserId(userId)
@@ -54,6 +56,7 @@ public class RoomCommandService {
             throw new BusinessException(ErrorCode.ROOM_INVALID_STATUS, "이미 종료된 방입니다.");
         }
         room.close();
+        messageCacheService.evict(roomId);
     }
 
     /**

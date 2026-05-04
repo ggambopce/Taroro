@@ -35,9 +35,14 @@ public class RoomDetailResponse {
         this.participants = participants;
     }
 
-    public static RoomDetailResponse of(Room room, List<RoomParticipant> participants, Map<Long, String> userNameMap) {
+    public static RoomDetailResponse of(Room room, List<RoomParticipant> participants,
+            Map<Long, String> userNameMap, Map<Long, Boolean> onlineMap) {
         List<ParticipantInfo> infos = participants.stream()
-                .map(p -> ParticipantInfo.of(p, userNameMap.getOrDefault(p.getUserId(), ""), room.getMasterId()))
+                .map(p -> {
+                    boolean isOnline = Boolean.TRUE.equals(onlineMap.get(p.getUserId()));
+                    return ParticipantInfo.of(p, userNameMap.getOrDefault(p.getUserId(), ""),
+                            room.getMasterId(), isOnline);
+                })
                 .toList();
         return new RoomDetailResponse(room, infos);
     }

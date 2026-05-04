@@ -22,6 +22,7 @@ public class ReadReceiptService {
 
     private final MessageReadRepository messageReadRepository;
     private final RoomRepository roomRepository;
+    private final UnreadCountService unreadCountService;
 
     /**
      * 읽음 처리 — 없으면 INSERT, 있으면 UPDATE
@@ -40,6 +41,7 @@ public class ReadReceiptService {
                         () -> messageReadRepository.save(MessageRead.create(roomId, userId, lastReadMessageId))
                 );
 
+        unreadCountService.reset(userId, roomId);
         log.debug("[ReadReceipt] roomId={}, userId={}, lastReadId={}", roomId, userId, lastReadMessageId);
         return new ReadUpdatedEvent(roomId, userId, lastReadMessageId);
     }

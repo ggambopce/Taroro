@@ -10,18 +10,25 @@ import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.messaging.support.MessageHeaderAccessor;
 import org.springframework.stereotype.Component;
 
+import com.neocompany.taroro.domain.room.service.OnlineStatusService;
+import com.neocompany.taroro.global.sessions.SessionPrincipal;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 /**
  * STOMP 프레임 레벨 권한 검사
  *
- * CONNECT  - Principal 존재 확인
+ * CONNECT  - Principal 존재 확인 + Redis 온라인 상태 등록
  * SUBSCRIBE - 허용된 destination 패턴 검사
  * SEND     - /app/ 접두사 검사
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class StompChannelInterceptor implements ChannelInterceptor {
+
+    private final OnlineStatusService onlineStatusService;
 
     @Override
     public Message<?> preSend(Message<?> message, MessageChannel channel) {
@@ -44,7 +51,9 @@ public class StompChannelInterceptor implements ChannelInterceptor {
             log.warn("[STOMP] CONNECT blocked - no principal");
             throw new MessageDeliveryException("인증되지 않은 연결입니다.");
         }
-        log.info("[STOMP] CONNECT - user={}", accessor.getUser().getName());
+        SessionPrincipal sp = (SessionPrincipal) accessor.getUser();
+        onlineStatusService.setOnline(sp.getUserId(), accessor.getSessionId());
+        log.info("[STOMP] CONNECT - user={}", sp.getName());
     }
 
     // ── SUBSCRIBE ─────────────────────────────────────────────────────────────

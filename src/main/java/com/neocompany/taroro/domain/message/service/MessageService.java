@@ -35,6 +35,7 @@ public class MessageService {
     private final MessageReadRepository messageReadRepository;
     private final RoomRepository roomRepository;
     private final UserRepository userRepository;
+    private final MessageCacheService messageCacheService;
 
     public ChatMessageResponse.PageResult getMessages(Long roomId, Long requesterId, Long cursorId, int size) {
         Room room = roomRepository.findById(roomId)
@@ -45,6 +46,16 @@ public class MessageService {
         }
 
         int pageSize = (size > 0 && size <= 100) ? size : DEFAULT_PAGE_SIZE;
+
+        // 첫 페이지(cursor 없음)는 캐시 우선 조회
+        if (cursorId == null) {
+            List<ChatMessageResponse> cached = messageCacheService.getRecent(roomId, pageSize);
+            if (cached != null) {
+                List<ChatMessageResponse> filtered = cached.stream().filter(m -> m != null).toList();
+                return new ChatMessageResponse.PageResult(roomId, filtered, filtered.size() == pageSize);
+            }
+        }
+
         PageRequest pageRequest = PageRequest.of(0, pageSize);
 
         Slice<ChatMessage> slice;
