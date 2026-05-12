@@ -64,6 +64,7 @@ public interface UserControllerDocs {
         )
     })
     ResponseEntity<GlobalApiResponse<?>> login(
+        HttpServletRequest httpReq,
         LoginRequestDto req,
         HttpServletResponse res
     );

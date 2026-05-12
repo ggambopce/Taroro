@@ -40,6 +40,9 @@ docker-compose up -d
 - **MySQL 8.4** (DB: `taro`, Port: 3306) via Docker, HikariCP pool
 - **Spring Security** + Custom DB Session (SID 쿠키) + OAuth2 (Google, Kakao, Naver)
 - **STOMP WebSocket** — 실시간 상담 채널 (인메모리 브로커 기반 최적화)
+- **Redis** (`localhost:6379`) — 실시간 접속 상태 추적 (온라인 유무, STOMP 세션 매핑)
+- **AWS S3** (`ap-northeast-2`, `matatabi-image-bucket`) — 프로필 이미지 업로드 (AWS SDK v2)
+- **Toss Payments** — 포인트 충전 PG 연동 (RestClient 기반)
 - **Springdoc OpenAPI 2.8.5** — Swagger UI (`/swagger`)
 - **Lombok** throughout — `@Getter`, `@Builder`, `@RequiredArgsConstructor` 등
 - **배포:** PM2, Port 4005
@@ -96,10 +99,11 @@ domain/
     dto/          # MasterApprovalRequest
   notification/   # 개인 알림 이벤트 발행 (UserEventPublishService)
   signaling/      # WebRTC 시그널링 STOMP 라우팅
-  point/          # 포인트 충전 (Toss Payments PG 연동)
-  image/          # S3 프로필 이미지 업로드
-  email/          # 이메일 인증코드 (인메모리 저장, SMTP)
-  toss/           # TossPaymentsClient (외부 HTTP 클라이언트)
+  point/          # 포인트 충전 — PointCharge, PointWallet, PointLedger, PointChargeApplier
+  image/          # S3 프로필 이미지 업로드 — S3ImageService, S3Config
+  email/          # 이메일 인증코드 (InMemoryEmailVerificationStore, SMTP)
+  toss/           # TossPaymentsClient (RestClient 기반 외부 HTTP 클라이언트)
+  support/        # 미구현 예정 도메인 — SecurityConfig에 /api/support/posts/answer/** (ROLE_ADMIN) 참조만 존재
 global/
   entity/         # BaseTimeEntity (@MappedSuperclass — createdAt/updatedAt)
   converter/      # StringListConverter — List<String> ↔ TEXT (쉼표 구분)
@@ -114,6 +118,9 @@ global/
                   # PrincipalDetails (HTTP SecurityContext용)
   exception/      # GlobalExceptionHandler, BusinessException, ErrorCode
   response/       # GlobalApiResponse<T> — 모든 응답 공통 래퍼
+  redis/          # RedisKeys (키 네이밍 유틸) — user:online:{id}, stomp:session:{id}, unread:{uid}:{rid}
+                  # OnlineStatusService — Redis 기반 접속 상태 관리
+                  # StompDisconnectListener — SessionDisconnectEvent → Redis 키 정리
   websocket/      # WebSocketHandshakeInterceptor, PrincipalHandshakeHandler
                   # StompChannelInterceptor, StompExceptionHandler
                   # StompDestination (destination 상수), StompEventPublisher
@@ -178,9 +185,10 @@ global/
 |---|---|---|
 | 클라이언트 → 서버 | `/app/rooms/{roomId}/enter\|leave\|start\|end` | 방 상태 명령 |
 | 클라이언트 → 서버 | `/app/rooms/{roomId}/messages\|read\|typing` | 채팅 명령 |
+| 클라이언트 → 서버 | `/app/rooms/{roomId}/cards/set\|spread\|pick\|reveal\|reset` | 카드 리딩 명령 |
 | 클라이언트 → 서버 | `/app/rooms/{roomId}/signal/offer\|answer\|ice` | WebRTC 시그널링 |
 | 클라이언트 → 서버 | `/app/masters/status` | 마스터 가용 상태 변경 |
-| 서버 → 구독자 | `/topic/rooms/{roomId}` | 방/메시지 이벤트 브로드캐스트 |
+| 서버 → 구독자 | `/topic/rooms/{roomId}` | 방/메시지/카드 이벤트 브로드캐스트 |
 | 서버 → 구독자 | `/topic/waiting-room` | 대기열 이벤트 |
 | 서버 → 구독자 | `/topic/masters/status` | 마스터 상태 변경 브로드캐스트 |
 | 서버 → 개인 | `/user/{id}/queue/events` | 개인 알림 |
@@ -197,6 +205,11 @@ global/
 - `PrincipalDetails` — HTTP 요청용. Spring Security `SecurityContext`에 저장. `SessionAuthenticationFilter`가 세팅.
 - `SessionPrincipal` — WebSocket/STOMP용. `WebSocketHandshakeInterceptor`가 핸드셰이크 시 세팅. `getName()`은 `String.valueOf(userId)`.
 
+**카드 리딩 서브시스템 (`domain/room/` 내 `CardStompController`):**
+- `RoomCardReading` 엔티티: `roomId`, `setId`, `cardId`, `position`, `isPicked`, `isRevealed`, `pickedAt`, `revealedAt`
+- 이벤트 타입 (`CardEventType`): `CARD_SET_SELECTED`, `CARDS_SPREAD`, `CARD_PICKED`, `CARD_REVEALED`, `READING_RESET`
+- `CardReadingResponse.CardItem` — `@JsonInclude(NON_NULL)` 적용으로 reveal 전까지 카드 정보 비노출
+
 **방(Room) 상태 전이:**
 `WAITING` → (start) → `ACTIVE` → (end/close) → `CLOSED`
 `WAITING` → (close) → `CLOSED` (마스터가 직접 종료)
@@ -205,6 +218,21 @@ global/
 - `masterId`: 마스터의 **User ID** (TaroMaster PK 아님) — `createByMaster()`에서 `userId`와 동일값 세팅
 - `roomName`, `masterName`: 방 생성 시 TaroMaster.displayName 스냅샷
 - `senderRole` 판별: `senderId.equals(room.getMasterId())` → "MASTER" else "USER"
+
+### Toss Payments 충전 트랜잭션 분리 패턴
+
+`PointChargeService`의 `confirm()`은 **의도적으로 `@Transactional` 없음** — Toss API 호출 도중 DB 트랜잭션을 열면 네트워크 오류 시 롤백으로 결제는 완료됐는데 포인트 미지급 상황이 발생하기 때문.
+
+1. `ready()` `@Transactional` — `PointCharge(status=READY)` + UUID `orderId` 생성
+2. `confirm()` **NO @Transactional** — `TossPaymentsClient.confirm()` 호출 → 성공 시 `apply()` 위임
+   - 멱등성 체크: 이미 `PAID` 상태면 조용히 리턴
+3. `PointChargeApplier.apply()` `@Transactional` — `PointCharge` → `PAID`, `PointWallet` 잔액 증가, `PointLedger` 감사 로그 기록
+
+### 페이지네이션 패턴
+
+- **`Slice` (not `Page`)** — `count(*)` 쿼리 없이 `hasNext = items.size() == limit` 휴리스틱 사용
+- **커서 기반** (메시지): `findByRoomIdAndIdLessThanOrderByIdDesc(roomId, cursorId, Pageable)` — 최신 메시지부터 역방향 조회
+- **오프셋 기반** (목록): `limit`/`offset` 쿼리 파라미터, `PageResult<T>` 래퍼 응답
 
 ### Swagger 작성 규칙
 - 컨트롤러에 Swagger 어노테이션 직접 작성 금지.
@@ -265,7 +293,8 @@ global/
 ## Configuration Notes
 
 - OAuth2 클라이언트 시크릿은 `application.yml`에 있음 (운영 시 환경변수로 분리 필요)
-- Redis (`localhost:6379`), SMTP (Gmail) 설정 존재하나 현재 미사용
+- Redis (`localhost:6379`, pw: `1234`) — 실시간 접속 추적에 **실제 사용 중**. `RedisKeys` 유틸로 키 네이밍 통일
+- SMTP (Gmail `smtp.gmail.com:587`) — 이메일 인증 코드 발송에 사용
 - Toss Payments 시크릿 키는 `application.yml`의 `toss.*` 항목
 - `StompExceptionHandler`는 `@Qualifier("subProtocolWebSocketHandler") WebSocketHandler`로 주입받아 `SubProtocolWebSocketHandler`로 캐스팅 — Spring이 해당 빈을 `WebSocketHandler` 타입으로 등록하기 때문
 - `@Transactional(readOnly = true)`는 반드시 `org.springframework.transaction.annotation.Transactional` 사용 (`jakarta.transaction.Transactional`은 `readOnly` 속성 없음)

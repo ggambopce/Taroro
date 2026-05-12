@@ -14,6 +14,7 @@ import com.neocompany.taroro.domain.users.dto.MeAuthResponseDto;
 import com.neocompany.taroro.global.oauth2.PrincipalDetails;
 import com.neocompany.taroro.global.response.GlobalApiResponse;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +29,10 @@ public class AdminAuthController implements AdminAuthControllerDocs {
     @Override
     @PostMapping("/auth/login")
     public GlobalApiResponse<?> login(
+            HttpServletRequest httpReq,
             @RequestBody @Valid LoginRequestDto request,
             HttpServletResponse response) {
-        userService.adminLogin(request, response);
+        userService.adminLogin(request, httpReq, response);
         return GlobalApiResponse.ok("로그인 성공", null);
     }
 

@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @Tag(name = "Admin - Auth", description = "관리자 인증 API")
@@ -56,7 +57,7 @@ public interface AdminAuthControllerDocs {
                     }
                     """)))
     })
-    GlobalApiResponse<?> login(LoginRequestDto request, HttpServletResponse response);
+    GlobalApiResponse<?> login(HttpServletRequest httpReq, LoginRequestDto request, HttpServletResponse response);
 
     @Operation(
         summary = "관리자 정보 조회",

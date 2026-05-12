@@ -34,9 +34,9 @@ public class UserController implements UserControllerDocs {
 
     @Override
     @PostMapping("/login")
-    public ResponseEntity<GlobalApiResponse<?>> login(@RequestBody @Valid LoginRequestDto req, HttpServletResponse res) {
+    public ResponseEntity<GlobalApiResponse<?>> login(HttpServletRequest httpReq, @RequestBody @Valid LoginRequestDto req, HttpServletResponse res) {
 
-        userService.login(req, res);
+        userService.login(req, httpReq, res);
         return ResponseEntity.ok(GlobalApiResponse.ok("로그인 성공", null));
     }
 

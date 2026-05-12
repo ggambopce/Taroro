@@ -35,11 +35,10 @@ public class UserService {
     private final EmailService emailService;
     private final SessionService sessionService;
 
-    private static final boolean SECURE_COOKIE = false; // 운영 HTTPS면 true
     private static final Duration SESSION_TTL = Duration.ofDays(365);
 
     @Transactional
-    public void login(LoginRequestDto req, HttpServletResponse res) {
+    public void login(LoginRequestDto req, HttpServletRequest httpReq, HttpServletResponse res) {
         // 비밀번호와 디비 비밀번호 일치 확인
         User user = verifyCredentials(req);
 
@@ -50,11 +49,11 @@ public class UserService {
         // SID 발급
         String sid = sessionService.createSession(user.getUserId(), SESSION_TTL);
         // 쿠키 세팅
-        SessionCookieUtil.writeSidCookies(res, sid, SECURE_COOKIE);
+        SessionCookieUtil.writeSidCookies(res, sid, isHttps(httpReq));
     }
 
     @Transactional
-    public void adminLogin(LoginRequestDto req, HttpServletResponse res) {
+    public void adminLogin(LoginRequestDto req, HttpServletRequest httpReq, HttpServletResponse res) {
         User user = verifyCredentials(req);
 
         if (user.isDeleted()) {
@@ -65,7 +64,12 @@ public class UserService {
         }
 
         String sid = sessionService.createSession(user.getUserId(), SESSION_TTL);
-        SessionCookieUtil.writeSidCookies(res, sid, SECURE_COOKIE);
+        SessionCookieUtil.writeSidCookies(res, sid, isHttps(httpReq));
+    }
+
+    private boolean isHttps(HttpServletRequest req) {
+        String proto = req.getHeader("X-Forwarded-Proto");
+        return "https".equalsIgnoreCase(proto) || req.isSecure();
     }
 
     /**
@@ -192,7 +196,7 @@ public class UserService {
             sessionService.deleteSession(sid);
         }
         // 2) SID 쿠키 제거
-        SessionCookieUtil.clearSidCookie(res, SECURE_COOKIE);
+        SessionCookieUtil.clearSidCookie(res, isHttps(req));
         // 3) SecurityContext 정리
         SecurityContextHolder.clearContext();
     }

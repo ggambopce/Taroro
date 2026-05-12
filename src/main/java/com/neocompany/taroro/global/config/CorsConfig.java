@@ -39,9 +39,13 @@ public class CorsConfig {
         // 허용할 프론트엔드 주소 목록
         config.setAllowedOrigins(List.of(
                 "http://localhost:5174",
+                "http://localhost:6005",
+                "http://localhost:3005",
                 "http://localhost:8080",
                 "http://218.38.136.81:8080",
                 "https://taro.neocompany.co.kr",
+                "https://taro.neocompany.co.kr:6005",
+                "https://taro.neocompany.co.kr:3005",
                 "https://supretest.taro.neocompany.co.kr",
                 "http://124.194.54.194:5174"
         ));
