@@ -60,4 +60,17 @@ public class PointLedger {
 
     @CreationTimestamp
     private Instant createdAt;
+
+    public static PointLedger of(PointWallet wallet, long delta,
+                                  PointLedgerType type, String refTable, Long refId) {
+        return PointLedger.builder()
+                .user(wallet.getUser())
+                .wallet(wallet)
+                .delta(delta)
+                .balanceAfter(wallet.getBalance())
+                .type(type)
+                .refTable(refTable)
+                .refId(refId)
+                .build();
+    }
 }

@@ -7,7 +7,7 @@ import lombok.Getter;
 @Getter
 public class PointChargeReadyRequestDto {
 
-    @NotNull
-    @Min(1)
+    @NotNull(message = "충전 금액을 입력해주세요.")
+    @Min(value = 1, message = "충전 금액은 1 이상이어야 합니다.")
     private Long pointAmount;
 }

@@ -77,7 +77,11 @@ public class SecurityConfig {
                                 "/api/auth/withdraw",
                                 "/api/auth/logout",
                                 "/api/point/charge/toss/ready",
-                                "/api/point/charge/toss/confirm"
+                                "/api/point/charge/toss/confirm",
+                                "/api/point/wallet/**",
+                                "/api/point/ledger/**",
+                                "/api/master-auth/earnings/**",
+                                "/api/master-auth/withdrawals/**"
                         ).authenticated() // 사용자 인증 필수
                         .anyRequest().permitAll()
                 )

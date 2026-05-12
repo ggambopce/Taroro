@@ -70,4 +70,12 @@ public class AdminTaroMasterService {
 
         return new TaroMasterResponse(master);
     }
+
+    @Transactional
+    public TaroMasterResponse updateCommissionRate(Long masterId, int rate) {
+        TaroMaster master = masterRepository.findById(masterId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.MASTER_NOT_FOUND));
+        master.updateCommissionRate(rate);
+        return new TaroMasterResponse(master);
+    }
 }

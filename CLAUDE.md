@@ -94,12 +94,26 @@ domain/
   admin/          # 관리자 전용 API (/api/admin/**)
     controller/   # AdminAuthController, AdminTaroMasterController
                   # AdminTaroCardSetController, AdminTaroCardController
-    service/      # AdminTaroMasterService (승인/전체목록/displayName맵)
+                  # AdminWithdrawalController (출금 승인/거절/완료)
+                  # AdminConsultationPaymentController (환불)
+    service/      # AdminTaroMasterService (승인/전체목록/displayName맵/수수료율 변경)
     docs/         # AdminAuthControllerDocs, AdminTaroMasterControllerDocs 등
-    dto/          # MasterApprovalRequest
+    dto/          # MasterApprovalRequest, UpdateCommissionRateRequest
   notification/   # 개인 알림 이벤트 발행 (UserEventPublishService)
   signaling/      # WebRTC 시그널링 STOMP 라우팅
   point/          # 포인트 충전 — PointCharge, PointWallet, PointLedger, PointChargeApplier
+                  # + PointWalletQueryService / PointWalletHttpController (지갑/원장 조회)
+  payment/        # 상담 결제 / 마스터 적립
+                  # entity: ConsultationPayment, MasterEarningWallet, MasterEarningLedger
+                  # service: ConsultationPaymentService (Room.start 시 사전 결제 트리거)
+                  #          ConsultationPaymentQueryService, MasterEarningQueryService
+                  # controller: MasterEarningHttpController (마스터 본인)
+                  # enums: PaymentStatus(COMPLETED/REFUNDED), MasterEarningType(EARN/WITHDRAW/REFUND_DEDUCT/ADJUSTMENT)
+  withdrawal/     # 마스터 출금 신청
+                  # entity: WithdrawalRequest (PENDING/APPROVED/REJECTED/COMPLETED)
+                  # service: WithdrawalCommandService (신청 시 잔액 잠금, 거절 시 자동 복구)
+                  #          WithdrawalQueryService
+                  # controller: WithdrawalHttpController (마스터) — AdminWithdrawalController는 admin 도메인
   image/          # S3 프로필 이미지 업로드 — S3ImageService, S3Config
   email/          # 이메일 인증코드 (InMemoryEmailVerificationStore, SMTP)
   toss/           # TossPaymentsClient (RestClient 기반 외부 HTTP 클라이언트)
@@ -250,7 +264,7 @@ global/
 
 ### Endpoint Security Tiers (`SecurityConfig`)
 - **Public:** Swagger, OAuth2 경로, 정적 파일, `/api/auth/login`, `/api/auth/signup`, `/api/auth/logout`, `/api/auth/email/**`, `/api/auth/password/reset`, `/api/admin/auth/login`, `/api/waiting-room`, `anyRequest().permitAll()` (나머지도 기본 허용)
-- **Authenticated:** `/api/auth/me`, `/api/auth/withdraw`, `/api/point/charge/toss/**`
+- **Authenticated:** `/api/auth/me`, `/api/auth/withdraw`, `/api/point/charge/toss/**`, `/api/point/wallet/**`, `/api/point/ledger/**`, `/api/master-auth/earnings/**`, `/api/master-auth/withdrawals/**`
 - **Admin (`ROLE_ADMIN`):** `/api/admin/**` (단, `/api/admin/auth/login` 제외), `/api/support/posts/answer/**`
 - **WebSocket:** `/ws/chat`, `/ws/chat-raw` — `StompChannelInterceptor`에서 별도 인증 (SID 쿠키)
 
@@ -278,17 +292,42 @@ global/
 | `taro_auth` | user_idx(FK), bank_address, bank_type, currency_exchange_rate(default 70) |
 | `taro_payment_history` | payer_idx(FK), recipient_idx(FK), amount, type(taro/destiny), status, memo |
 | `exchange_history` | user_idx(FK), settlement_fee, principal, profits, status |
-| `room` | master_id(FK→user), master_name, room_name, status(WAITING/ACTIVE/CLOSED), started_at, ended_at |
+| `room` | master_id(FK→user), master_name, room_name, plan_id(nullable, FK→master_plan), status(WAITING/ACTIVE/CLOSED), started_at, ended_at |
 | `room_participant` | room_id(FK), user_id(FK), is_online, joined_at, left_at |
 | `chat_message` | room_id(FK), sender_id(FK), content, type(TEXT/IMAGE/SYSTEM) |
 | `message_read` | room_id(FK), user_id(FK), last_read_message_id — 방별 마지막 읽음 메시지 ID |
 | `room_price` | master_idx(FK), title, content(Text), price, discount_price(default 0) |
-| `taro_master` | user_id(unique), display_name, intro(TEXT), profile_image_url, specialties(TEXT), career_years, status(ONLINE/BUSY/BREAK/OFFLINE), approval_status(PENDING/APPROVED/REJECTED), is_public |
+| `taro_master` | user_id(unique), display_name, intro(TEXT), profile_image_url, specialties(TEXT), career_years, status(ONLINE/BUSY/BREAK/OFFLINE), approval_status(PENDING/APPROVED/REJECTED), is_public, commission_rate(0~100, default 20) |
 | `taro_card_set` | master_id(FK), set_name, set_description(TEXT), brand_name, publisher_name, cover_image_url, card_count, is_active, is_public, deleted, deleted_at |
 | `taro_card` | set_id(FK), master_id(FK), card_name, card_number, arcana_type(MAJOR/MINOR), suit(WANDS/CUPS/SWORDS/PENTACLES, nullable), keywords(TEXT), card_description(TEXT), upright_meaning(TEXT), reversed_meaning(TEXT), image_url, is_active, deleted, deleted_at |
 | `master_plan` | master_id(FK), plan_name, plan_description(TEXT), counseling_minutes, price, discount_rate(0~100), is_active, is_public, deleted, deleted_at |
 | `master_settlement` | master_id(unique), bank_name, account_number, account_holder_name, phone, email, is_verified_account |
 | `master_verification` | master_id(unique), is_identity_verified, is_pass_verified, verification_status(NONE/PENDING/VERIFIED/REJECTED), pass_verified_at, identity_verified_at, reject_reason(TEXT) |
+| `master_earning_wallet` | master_id(unique, FK→taro_master), balance, total_earned, total_withdrawn |
+| `master_earning_ledger` | master_id(FK), wallet_id(FK), delta, balance_after, type(EARN/WITHDRAW/REFUND_DEDUCT/ADJUSTMENT), ref_table, ref_id, created_at |
+| `consultation_payment` | room_id(unique, FK), user_id, master_id, plan_id, gross_amount, platform_fee, net_to_master, applied_commission_rate, status(COMPLETED/REFUNDED), paid_at, refunded_at |
+| `withdrawal_request` | master_id(FK), amount, bank_name, account_number, account_holder_name (스냅샷), status(PENDING/APPROVED/REJECTED/COMPLETED), processed_by_admin_id, requested_at, processed_at, reject_reason(TEXT) |
+
+## 상담 결제 / 적립 / 출금 플로우
+
+### 결제 (방 start)
+[RoomCommandService.start()](src/main/java/com/neocompany/taroro/domain/room/service/RoomCommandService.java) → [ConsultationPaymentService.chargeForRoom()](src/main/java/com/neocompany/taroro/domain/payment/service/ConsultationPaymentService.java) 호출. 같은 `@Transactional` 안에서:
+1. `PointWallet.findByUserIdForUpdate()` (PESSIMISTIC_WRITE 락) → 잔액 검증 → `deduct(price)` + `PointLedger(USE)` 기록
+2. 수수료 계산: `fee = price * master.commissionRate / 100`, `net = price - fee`
+3. `MasterEarningWallet.findByMasterIdForUpdate()` → `credit(net)` + `MasterEarningLedger(EARN)` 기록
+4. `ConsultationPayment` 1행 저장 (수수료율 스냅샷 포함)
+
+`room.planId == null` 일 때는 무료/테스트 방으로 결제 건너뜀.
+
+### 출금 (마스터 신청 → 관리자 처리)
+[WithdrawalCommandService](src/main/java/com/neocompany/taroro/domain/withdrawal/service/WithdrawalCommandService.java):
+- **신청**: `MasterSettlement.isVerifiedAccount` + `MasterVerification.isPassVerified` 확인 → 잔액 락 → `lockForWithdrawal(amount)` 즉시 차감 → `WithdrawalRequest(PENDING)` 저장 + 계좌 스냅샷
+- **승인**: `WithdrawalRequest(APPROVED)` 상태 전이만 (잔액 영향 없음)
+- **거절**: `MasterEarningWallet.restoreLocked(amount)` 잔액 복구 + `MasterEarningLedger(ADJUSTMENT)` 기록
+- **완료**: `WithdrawalRequest(COMPLETED)` + `MasterEarningLedger(WITHDRAW, -amount)` 기록 (실제 외부 송금은 관리자가 외부 처리)
+
+### 환불 (관리자)
+[ConsultationPaymentService.refund()](src/main/java/com/neocompany/taroro/domain/payment/service/ConsultationPaymentService.java) → 사용자 `PointWallet.credit(gross)` + `PointLedger(REFUND)`, 마스터 `MasterEarningWallet.deduct(net)` + `MasterEarningLedger(REFUND_DEDUCT)`. 마스터 잔액 부족 시 `MASTER_BALANCE_INSUFFICIENT_FOR_REFUND` 반환.
 
 ## Configuration Notes
 

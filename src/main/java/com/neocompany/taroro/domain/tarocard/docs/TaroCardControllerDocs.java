@@ -15,17 +15,21 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "TaroCard", description = "타로 카드 관리 API")
 public interface TaroCardControllerDocs {
 
-    @Operation(summary = "세트별 카드 목록 조회", description = "특정 카드 세트에 속한 카드 목록을 조회합니다.")
+    @Operation(summary = "세트별 카드 목록 조회", description = "특정 카드 세트에 속한 카드 목록을 조회합니다. 비공개 세트는 소유 마스터만 조회 가능합니다.")
     GlobalApiResponse<PageResult<TaroCardSummaryResponse>> getCardsBySet(
         Long setId,
         String keyword,
         Boolean isActive,
         int limit,
-        int offset
+        int offset,
+        @Parameter(hidden = true) PrincipalDetails principal
     );
 
-    @Operation(summary = "카드 상세 조회", description = "타로 카드 상세 정보를 조회합니다.")
-    GlobalApiResponse<TaroCardResponse> getCard(Long cardId);
+    @Operation(summary = "카드 상세 조회", description = "타로 카드 상세 정보를 조회합니다. 비공개 세트에 속한 카드는 소유 마스터만 조회 가능합니다.")
+    GlobalApiResponse<TaroCardResponse> getCard(
+        Long cardId,
+        @Parameter(hidden = true) PrincipalDetails principal
+    );
 
     @Operation(summary = "카드 등록", description = "마스터가 자신의 카드 세트에 카드를 등록합니다.")
     GlobalApiResponse<?> create(

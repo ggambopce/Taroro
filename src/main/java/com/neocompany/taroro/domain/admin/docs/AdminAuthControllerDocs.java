@@ -28,34 +28,32 @@ public interface AdminAuthControllerDocs {
             """
     )
     @ApiResponses({
-        @ApiResponse(responseCode = "200", description = "로그인 성공",
+        @ApiResponse(responseCode = "200", description = "처리 결과 (success/statusCode로 구분)",
             content = @Content(mediaType = "application/json",
                 schema = @Schema(implementation = GlobalApiResponse.class),
-                examples = @ExampleObject(value = """
-                    {
-                      "success": true,
-                      "message": "로그인 성공",
-                      "statusCode": 200
-                    }
-                    """))),
-        @ApiResponse(responseCode = "200", description = "관리자 권한 없음",
-            content = @Content(mediaType = "application/json",
-                examples = @ExampleObject(value = """
-                    {
-                      "success": false,
-                      "message": "관리자 권한이 없습니다.",
-                      "statusCode": 201
-                    }
-                    """))),
-        @ApiResponse(responseCode = "200", description = "이메일/비밀번호 불일치",
-            content = @Content(mediaType = "application/json",
-                examples = @ExampleObject(value = """
-                    {
-                      "success": false,
-                      "message": "비밀번호가 일치하지 않습니다.",
-                      "statusCode": 201
-                    }
-                    """)))
+                examples = {
+                    @ExampleObject(name = "로그인 성공", value = """
+                        {
+                          "success": true,
+                          "message": "로그인 성공",
+                          "statusCode": 200
+                        }
+                        """),
+                    @ExampleObject(name = "관리자 권한 없음", value = """
+                        {
+                          "success": false,
+                          "message": "관리자 권한이 없습니다.",
+                          "statusCode": 201
+                        }
+                        """),
+                    @ExampleObject(name = "이메일/비밀번호 불일치", value = """
+                        {
+                          "success": false,
+                          "message": "비밀번호가 일치하지 않습니다.",
+                          "statusCode": 201
+                        }
+                        """)
+                }))
     })
     GlobalApiResponse<?> login(HttpServletRequest httpReq, LoginRequestDto request, HttpServletResponse response);
 

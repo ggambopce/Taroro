@@ -1,5 +1,6 @@
 package com.neocompany.taroro.domain.room.docs;
 
+import com.neocompany.taroro.domain.room.dto.CardReadingResponse;
 import com.neocompany.taroro.domain.room.dto.CreateRoomRequest;
 import com.neocompany.taroro.domain.room.dto.RoomDetailResponse;
 import com.neocompany.taroro.domain.room.dto.RoomSummaryResponse;
@@ -205,6 +206,69 @@ public interface RoomControllerDocs {
     })
     GlobalApiResponse<?> closeRoom(
         Long roomId,
+        @Parameter(hidden = true) PrincipalDetails principal
+    );
+
+    @Operation(
+        summary = "카드 리딩 현황 조회",
+        description = """
+            현재 방의 카드 리딩 상태를 조회합니다.
+            - 스프레드된 카드 목록과 각 카드의 위치/뽑힘/공개 여부를 반환합니다.
+            - `isRevealed=true`인 카드만 카드명, 이미지, 키워드 등의 상세 정보가 포함됩니다.
+            - 아직 공개되지 않은 카드(`isRevealed=false`)는 `position`, `isPicked` 필드만 반환됩니다.
+            - 방 참여자(마스터/유저)만 조회 가능합니다.
+            """
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "조회 결과",
+            content = @Content(mediaType = "application/json",
+                schema = @Schema(implementation = GlobalApiResponse.class),
+                examples = {
+                    @ExampleObject(name = "성공 (공개 카드 포함)", value = """
+                        {
+                          "success": true,
+                          "message": "카드 리딩 조회 성공",
+                          "statusCode": 200,
+                          "data": {
+                            "cards": [
+                              {
+                                "position": 1,
+                                "isPicked": true,
+                                "isRevealed": true,
+                                "cardId": 5,
+                                "cardName": "황제",
+                                "arcanaType": "MAJOR",
+                                "suit": null,
+                                "keywords": ["권위", "안정", "성공"],
+                                "imageUrl": "https://example.com/cards/emperor.jpg",
+                                "uprightMeaning": "성공과 권위, 안정된 기반",
+                                "reversedMeaning": "독재와 경직, 통제 상실"
+                              },
+                              {
+                                "position": 2,
+                                "isPicked": true,
+                                "isRevealed": false
+                              },
+                              {
+                                "position": 3,
+                                "isPicked": false,
+                                "isRevealed": false
+                              }
+                            ]
+                          }
+                        }
+                        """),
+                    @ExampleObject(name = "접근 권한 없음", value = """
+                        {
+                          "success": false,
+                          "message": "상담방 접근 권한이 없습니다.",
+                          "statusCode": 201
+                        }
+                        """)
+                }))
+    })
+    GlobalApiResponse<CardReadingResponse> getCardReading(
+        @Parameter(description = "상담방 ID", example = "1") Long roomId,
         @Parameter(hidden = true) PrincipalDetails principal
     );
 }

@@ -5,4 +5,5 @@ import lombok.Getter;
 @Getter
 public class CreateRoomRequest {
     private String roomName;
+    private Long planId;
 }

@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.neocompany.taroro.domain.payment.dto.response.ConsultationPaymentResponse;
+import com.neocompany.taroro.domain.payment.service.ConsultationPaymentQueryService;
 import com.neocompany.taroro.domain.room.docs.RoomControllerDocs;
 import com.neocompany.taroro.domain.room.dto.CardReadingResponse;
 import com.neocompany.taroro.domain.room.dto.CreateRoomRequest;
@@ -34,6 +36,7 @@ public class RoomHttpController implements RoomControllerDocs {
     private final RoomService roomService;
     private final RoomCommandService roomCommandService;
     private final CardReadingService cardReadingService;
+    private final ConsultationPaymentQueryService paymentQueryService;
 
     @Override
     @PostMapping
@@ -84,11 +87,20 @@ public class RoomHttpController implements RoomControllerDocs {
         return GlobalApiResponse.ok("상담방 종료 성공", null);
     }
 
+    @Override
     @GetMapping("/{roomId}/cards")
     public GlobalApiResponse<CardReadingResponse> getCardReading(
             @PathVariable Long roomId,
             @AuthenticationPrincipal PrincipalDetails principal) {
         return GlobalApiResponse.ok("카드 리딩 조회 성공",
                 cardReadingService.getReading(roomId, principal.getUser().getUserId()));
+    }
+
+    @GetMapping("/{roomId}/payment")
+    public GlobalApiResponse<ConsultationPaymentResponse> getRoomPayment(
+            @PathVariable Long roomId,
+            @AuthenticationPrincipal PrincipalDetails principal) {
+        return GlobalApiResponse.ok("상담방 결제 정보 조회 성공",
+                paymentQueryService.getByRoomId(roomId, principal.getUser().getUserId()));
     }
 }

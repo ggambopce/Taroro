@@ -43,13 +43,13 @@ public class AdminTaroCardController implements AdminTaroCardControllerDocs {
             @RequestParam(defaultValue = "20") int limit,
             @RequestParam(defaultValue = "0") int offset) {
         return GlobalApiResponse.ok("카드 목록 조회 성공",
-                queryService.getCardsBySet(setId, keyword, isActive, limit, offset));
+                queryService.getCardsBySetForAdmin(setId, keyword, isActive, limit, offset));
     }
 
     @Override
     @GetMapping("/{cardId}")
     public GlobalApiResponse<TaroCardResponse> getCard(@PathVariable Long cardId) {
-        return GlobalApiResponse.ok("카드 상세 조회 성공", queryService.getCard(cardId));
+        return GlobalApiResponse.ok("카드 상세 조회 성공", queryService.getCardForAdmin(cardId));
     }
 
     @Override

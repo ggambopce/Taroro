@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.neocompany.taroro.domain.admin.docs.AdminTaroMasterControllerDocs;
 import com.neocompany.taroro.domain.admin.dto.request.MasterApprovalRequest;
+import com.neocompany.taroro.domain.admin.dto.request.UpdateCommissionRateRequest;
 import com.neocompany.taroro.domain.admin.service.AdminTaroMasterService;
 import com.neocompany.taroro.domain.taromaster.dto.response.TaroMasterResponse;
 import com.neocompany.taroro.global.dto.PageResult;
@@ -55,5 +56,14 @@ public class AdminTaroMasterController implements AdminTaroMasterControllerDocs 
         TaroMasterResponse result = adminService.approve(masterId, request);
         return GlobalApiResponse.ok("마스터 승인 상태 변경 성공",
                 Map.of("masterId", result.getMasterId(), "approvalStatus", result.getApprovalStatus()));
+    }
+
+    @PatchMapping("/{masterId}/commission")
+    public GlobalApiResponse<?> updateCommissionRate(
+            @PathVariable Long masterId,
+            @RequestBody @jakarta.validation.Valid UpdateCommissionRateRequest request) {
+        TaroMasterResponse result = adminService.updateCommissionRate(masterId, request.getRate());
+        return GlobalApiResponse.ok("수수료율 변경 성공",
+                Map.of("masterId", result.getMasterId(), "commissionRate", request.getRate()));
     }
 }

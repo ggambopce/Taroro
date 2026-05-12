@@ -11,28 +11,23 @@ import lombok.Setter;
 @Setter
 public class ResetPasswordRequestDto {
 
-    @NotBlank
-    @Size(max=120)
-    @Email
+    @NotBlank(message = "이메일을 입력해주세요.")
+    @Size(max = 120, message = "이메일은 120자 이하여야 합니다.")
+    @Email(message = "이메일 형식이 올바르지 않습니다.")
     private String email;
 
-    @NotBlank
-    @Size(min=2, max=20)
+    @NotBlank(message = "이름을 입력해주세요.")
+    @Size(min = 2, max = 20, message = "이름은 2자 이상 20자 이하여야 합니다.")
     private String name;
 
-    /**
-     * 비밀번호 정규식
-     * 영문자(대문자 또는 소문자)와 숫자가 최소 1개 이상씩 포함
-     * 특수문자 !@#$%^&*()_+-={}[]:;"'<>,.?/ 허용
-     * 최소 8자 이상
-     */
-    @NotBlank
-    @Size(min = 8, max = 64)
-    @Pattern(regexp="^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d!@#$%^&*()_+\\-={}\\[\\]:;\"'<>,.?/]{8,}$")
+    @NotBlank(message = "비밀번호를 입력해주세요.")
+    @Size(min = 8, max = 64, message = "비밀번호는 8자 이상 64자 이하여야 합니다.")
+    @Pattern(
+        regexp = "^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d!@#$%^&*()_+\\-={}\\[\\]:;\"'<>,.?/]{8,}$",
+        message = "비밀번호는 영문자와 숫자를 각 1개 이상 포함해야 합니다."
+    )
     private String password;
 
-    @NotBlank
+    @NotBlank(message = "비밀번호 확인을 입력해주세요.")
     private String confirmPassword;
-
-
 }

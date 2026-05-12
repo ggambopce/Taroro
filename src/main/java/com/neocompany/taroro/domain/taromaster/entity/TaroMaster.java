@@ -64,6 +64,10 @@ public class TaroMaster extends BaseTimeEntity {
     @Builder.Default
     private boolean isPublic = true;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private int commissionRate = 20;
+
     // ── 도메인 메서드 ─────────────────────────────────────────────────────────
 
     public void updateStatus(MasterStatus newStatus) {
@@ -96,5 +100,13 @@ public class TaroMaster extends BaseTimeEntity {
         if (isPublic && approvalStatus == ApprovalStatus.APPROVED) return true;
         if (isAdmin) return true;
         return this.userId.equals(requesterId);
+    }
+
+    public void updateCommissionRate(int rate) {
+        if (rate < 0 || rate > 100) {
+            throw new com.neocompany.taroro.global.exception.BusinessException(
+                    com.neocompany.taroro.global.exception.ErrorCode.COMMISSION_RATE_INVALID);
+        }
+        this.commissionRate = rate;
     }
 }

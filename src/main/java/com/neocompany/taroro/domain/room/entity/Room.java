@@ -45,6 +45,9 @@ public class Room extends BaseTimeEntity {
     @Column(name = "master_name")
     private String masterName;
 
+    @Column(name = "plan_id")
+    private Long planId;
+
     @Column(name = "started_at")
     private Instant startedAt;
 
@@ -53,12 +56,13 @@ public class Room extends BaseTimeEntity {
 
     // ── 도메인 메서드 ─────────────────────────────────────────────────────────
 
-    public static Room createByMaster(Long masterUserId, String roomName, String masterName) {
+    public static Room createByMaster(Long masterUserId, String roomName, String masterName, Long planId) {
         Room r = new Room();
         r.userId = masterUserId;
         r.masterId = masterUserId;
         r.roomName = roomName;
         r.masterName = masterName;
+        r.planId = planId;
         r.status = RoomStatus.WAITING;
         return r;
     }

@@ -41,15 +41,20 @@ public class TaroCardHttpController implements TaroCardControllerDocs {
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) Boolean isActive,
             @RequestParam(defaultValue = "20") int limit,
-            @RequestParam(defaultValue = "0") int offset) {
+            @RequestParam(defaultValue = "0") int offset,
+            @AuthenticationPrincipal PrincipalDetails principal) {
+        Long requesterId = (principal != null) ? principal.getUser().getUserId() : null;
         return GlobalApiResponse.ok("카드 목록 조회 성공",
-                queryService.getCardsBySet(setId, keyword, isActive, limit, offset));
+                queryService.getCardsBySet(setId, keyword, isActive, limit, offset, requesterId));
     }
 
     @Override
     @GetMapping("/{cardId}")
-    public GlobalApiResponse<TaroCardResponse> getCard(@PathVariable Long cardId) {
-        return GlobalApiResponse.ok("카드 상세 조회 성공", queryService.getCard(cardId));
+    public GlobalApiResponse<TaroCardResponse> getCard(
+            @PathVariable Long cardId,
+            @AuthenticationPrincipal PrincipalDetails principal) {
+        Long requesterId = (principal != null) ? principal.getUser().getUserId() : null;
+        return GlobalApiResponse.ok("카드 상세 조회 성공", queryService.getCard(cardId, requesterId));
     }
 
     @Override

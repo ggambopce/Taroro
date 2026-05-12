@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.neocompany.taroro.domain.message.service.MessageCacheService;
+import com.neocompany.taroro.domain.payment.service.ConsultationPaymentService;
 import com.neocompany.taroro.domain.room.dto.CreateRoomRequest;
 import com.neocompany.taroro.domain.room.dto.UpdateRoomRequest;
 import com.neocompany.taroro.domain.room.dto.event.RoomEvent;
@@ -32,6 +33,7 @@ public class RoomCommandService {
     private final RoomParticipantRepository participantRepository;
     private final TaroMasterRepository masterRepository;
     private final MessageCacheService messageCacheService;
+    private final ConsultationPaymentService consultationPaymentService;
 
     public Room create(Long userId, CreateRoomRequest request) {
         TaroMaster master = masterRepository.findByUserId(userId)
@@ -39,7 +41,7 @@ public class RoomCommandService {
         if (master.getApprovalStatus() != ApprovalStatus.APPROVED) {
             throw new BusinessException(ErrorCode.MASTER_NOT_APPROVED, "승인된 마스터만 방을 생성할 수 있습니다.");
         }
-        Room room = Room.createByMaster(userId, request.getRoomName(), master.getDisplayName());
+        Room room = Room.createByMaster(userId, request.getRoomName(), master.getDisplayName(), request.getPlanId());
         return roomRepository.save(room);
     }
 
@@ -96,6 +98,9 @@ public class RoomCommandService {
     public RoomEvent start(Long roomId, Long userId) {
         Room room = getRoom(roomId);
         requireMaster(room, userId);
+
+        // 사전 결제 게이트 — 사용자 포인트 차감 + 마스터 적립
+        consultationPaymentService.chargeForRoom(room);
 
         room.start(); // 내부에서 상태 검증
 

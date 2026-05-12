@@ -51,8 +51,25 @@ public enum ErrorCode {
     // 마스터 정산/인증 관련 에러
     SETTLEMENT_NOT_FOUND(404, HttpStatus.NOT_FOUND, "정산 정보를 찾을 수 없습니다."),
     SETTLEMENT_ALREADY_EXISTS(400, HttpStatus.BAD_REQUEST, "이미 정산 정보가 존재합니다."),
+    SETTLEMENT_NOT_VERIFIED(400, HttpStatus.BAD_REQUEST, "정산 계좌가 인증되지 않았습니다."),
     VERIFICATION_NOT_FOUND(404, HttpStatus.NOT_FOUND, "인증 정보를 찾을 수 없습니다."),
-    PASS_VERIFICATION_FAILED(400, HttpStatus.BAD_REQUEST, "PASS 인증에 실패했습니다.");
+    PASS_VERIFICATION_FAILED(400, HttpStatus.BAD_REQUEST, "PASS 인증에 실패했습니다."),
+
+    // 상담 결제 / 적립 관련 에러
+    INSUFFICIENT_POINTS(400, HttpStatus.BAD_REQUEST, "포인트가 부족합니다."),
+    ROOM_PLAN_REQUIRED(400, HttpStatus.BAD_REQUEST, "결제 대상 플랜이 지정되지 않았습니다."),
+    PAYMENT_ALREADY_COMPLETED(400, HttpStatus.BAD_REQUEST, "이미 결제가 완료된 방입니다."),
+    PAYMENT_NOT_FOUND(404, HttpStatus.NOT_FOUND, "결제 정보를 찾을 수 없습니다."),
+    PAYMENT_ALREADY_REFUNDED(400, HttpStatus.BAD_REQUEST, "이미 환불된 결제입니다."),
+    MASTER_BALANCE_INSUFFICIENT_FOR_REFUND(400, HttpStatus.BAD_REQUEST, "마스터 잔액이 부족하여 환불할 수 없습니다."),
+    EARNING_WALLET_NOT_FOUND(404, HttpStatus.NOT_FOUND, "마스터 적립 지갑을 찾을 수 없습니다."),
+    COMMISSION_RATE_INVALID(400, HttpStatus.BAD_REQUEST, "수수료율은 0에서 100 사이여야 합니다."),
+
+    // 출금 관련 에러
+    WITHDRAWAL_NOT_FOUND(404, HttpStatus.NOT_FOUND, "출금 신청을 찾을 수 없습니다."),
+    WITHDRAWAL_INVALID_STATUS(400, HttpStatus.BAD_REQUEST, "처리할 수 없는 출금 상태입니다."),
+    WITHDRAWAL_INSUFFICIENT(400, HttpStatus.BAD_REQUEST, "출금 가능 잔액이 부족합니다."),
+    WITHDRAWAL_AMOUNT_INVALID(400, HttpStatus.BAD_REQUEST, "출금 금액은 1원 이상이어야 합니다.");
 
     private int code;
     private HttpStatus status;

@@ -1,6 +1,7 @@
 package com.neocompany.taroro.global.exception;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.servlet.NoHandlerFoundException;
@@ -10,6 +11,17 @@ import com.neocompany.taroro.global.response.GlobalApiResponse;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    // @Valid 검증 실패 → HTTP 200, body statusCode 201, 첫 번째 필드 에러 메시지
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<GlobalApiResponse<Void>> handleValidation(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult().getFieldErrors().stream()
+                .map(f -> f.getDefaultMessage())
+                .findFirst()
+                .orElse("입력값이 올바르지 않습니다.");
+        return ResponseEntity.ok()
+                .body(GlobalApiResponse.failure(201, message));
+    }
 
     // 비즈니스/유효성 에러 → HTTP 200, body statusCode 201
     @ExceptionHandler(BusinessException.class)

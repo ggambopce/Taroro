@@ -47,4 +47,19 @@ public class PointWallet {
 
     @UpdateTimestamp
     private Instant updatedAt;
+
+    public static PointWallet empty(User user) {
+        return PointWallet.builder()
+                .user(user)
+                .balance(0L)
+                .build();
+    }
+
+    public void credit(long amount) {
+        this.balance += amount;
+    }
+
+    public void deduct(long amount) {
+        this.balance -= amount;
+    }
 }
