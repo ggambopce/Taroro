@@ -14,6 +14,7 @@ public class MeAuthResponseDto {
     private String loginType;
     private String userName;
     private String userRole;
+    private boolean isTaroMaster;
     private Instant createdAt;      // 가입일
 
     public static MeAuthResponseDto of(User user) {
@@ -23,6 +24,7 @@ public class MeAuthResponseDto {
                 .loginType(user.getLoginType())
                 .userName(user.getName())
                 .userRole(user.getRoles())
+                .isTaroMaster(user.is_taro_master())
                 .createdAt(user.getCreatedAt())
                 .build();
     }

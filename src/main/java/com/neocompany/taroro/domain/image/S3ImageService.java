@@ -35,6 +35,10 @@ public class S3ImageService {
     }
 
     public S3UploadResult upload(List<MultipartFile> files) {
+        return upload("misc", files);
+    }
+
+    public S3UploadResult upload(String prefix, List<MultipartFile> files) {
         if (files == null || files.isEmpty()) {
             throw new IllegalArgumentException("files는 비어있을 수 없다.");
         }
@@ -48,8 +52,8 @@ public class S3ImageService {
             String original = Optional.ofNullable(f.getOriginalFilename()).orElse("file");
             String safeName = sanitizeFileName(original);
 
-            // 파일 경로
-            String key = String.format("%s/%s_%s", UUID.randomUUID(), safeName);
+            // 파일 경로: {prefix}/{uuid}/{filename}
+            String key = String.format("%s/%s/%s", normalizePrefix(prefix), UUID.randomUUID(), safeName);
 
             PutObjectRequest putReq = PutObjectRequest.builder()
                     .bucket(bucket)
@@ -68,6 +72,21 @@ public class S3ImageService {
         }
 
         return new S3UploadResult(items);
+    }
+
+    // 단일 파일 업로드 편의 메서드. 업로드된 객체의 public URL 만 반환.
+    public String uploadSingle(String prefix, MultipartFile file) {
+        S3UploadResult result = upload(prefix, List.of(file));
+        return result.getItems().get(0).getUrl();
+    }
+
+    private String normalizePrefix(String prefix) {
+        if (prefix == null || prefix.isBlank()) return "misc";
+        // 슬래시 시작/끝 제거, 백슬래시는 _ 로 치환
+        String trimmed = prefix.trim().replace("\\", "_");
+        while (trimmed.startsWith("/")) trimmed = trimmed.substring(1);
+        while (trimmed.endsWith("/")) trimmed = trimmed.substring(0, trimmed.length() - 1);
+        return trimmed.isBlank() ? "misc" : trimmed;
     }
 
     // 이미지 파일 검증 contentType이 image/*가 아니면 차단

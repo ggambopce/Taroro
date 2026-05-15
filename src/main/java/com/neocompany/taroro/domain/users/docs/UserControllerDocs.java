@@ -273,6 +273,7 @@ public interface UserControllerDocs {
                         "loginType": "normal",
                         "userName": "홍길동",
                         "userRole": "ROLE_USER",
+                        "isTaroMaster": false,
                         "createdAt": "2026-01-01T00:00:00Z"
                       }
                     }

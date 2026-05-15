@@ -10,7 +10,6 @@ import lombok.NoArgsConstructor;
 public class UpdateTaroMasterRequest {
     private String displayName;
     private String intro;
-    private String profileImageUrl;
     private List<String> specialties;
     private Integer careerYears;
     private Boolean isPublic;

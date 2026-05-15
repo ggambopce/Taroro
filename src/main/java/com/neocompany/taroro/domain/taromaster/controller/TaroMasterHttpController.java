@@ -1,14 +1,16 @@
 package com.neocompany.taroro.domain.taromaster.controller;
 
+import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import com.neocompany.taroro.domain.taromaster.docs.TaroMasterControllerDocs;
 import com.neocompany.taroro.domain.taromaster.dto.request.CreateTaroMasterRequest;
@@ -20,6 +22,7 @@ import com.neocompany.taroro.global.dto.PageResult;
 import com.neocompany.taroro.global.oauth2.PrincipalDetails;
 import com.neocompany.taroro.global.response.GlobalApiResponse;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 import java.util.Map;
@@ -33,11 +36,12 @@ public class TaroMasterHttpController implements TaroMasterControllerDocs {
     private final TaroMasterCommandService commandService;
 
     @Override
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public GlobalApiResponse<?> apply(
-            @RequestBody CreateTaroMasterRequest request,
+            @RequestPart("data") @Valid CreateTaroMasterRequest request,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
             @AuthenticationPrincipal PrincipalDetails principal) {
-        Long masterId = commandService.apply(principal.getUser().getUserId(), request);
+        Long masterId = commandService.apply(principal.getUser().getUserId(), request, profileImage);
         return GlobalApiResponse.ok("마스터 등록 신청 완료",
                 Map.of("masterId", masterId, "approvalStatus", "PENDING"));
     }
@@ -73,11 +77,12 @@ public class TaroMasterHttpController implements TaroMasterControllerDocs {
     }
 
     @Override
-    @PatchMapping("/me")
+    @PatchMapping(value = "/me", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public GlobalApiResponse<?> update(
-            @RequestBody UpdateTaroMasterRequest request,
+            @RequestPart("data") @Valid UpdateTaroMasterRequest request,
+            @RequestPart(value = "profileImage", required = false) MultipartFile profileImage,
             @AuthenticationPrincipal PrincipalDetails principal) {
-        Long masterId = commandService.update(principal.getUser().getUserId(), request);
+        Long masterId = commandService.update(principal.getUser().getUserId(), request, profileImage);
         return GlobalApiResponse.ok("마스터 정보 수정 성공", Map.of("masterId", masterId));
     }
 }

@@ -75,6 +75,7 @@ public interface AdminAuthControllerDocs {
                         "loginType": "normal",
                         "userName": "관리자",
                         "userRole": "ROLE_ADMIN",
+                        "isTaroMaster": false,
                         "createdAt": "2026-01-01T00:00:00Z"
                       }
                     }

@@ -275,9 +275,12 @@ client.reconnect_delay = 5000;
   "loginType": "normal",
   "userName": "홍길동",
   "userRole": "ROLE_USER",
+  "isTaroMaster": false,
   "createdAt": "2026-01-01T00:00:00Z"
 }
 ```
+
+> `isTaroMaster`: 승인된 타로마스터인지 여부 (`User.is_taro_master` 캐시 필드 기반). 마스터 신청만 한 PENDING 상태는 `false`, 관리자가 승인한 시점에 `true`로 토글됨.
 
 ---
 
@@ -301,9 +304,17 @@ client.reconnect_delay = 5000;
   "profileImageUrl": "https://...",
   "specialties": ["연애", "진로"],
   "careerYears": 10,
-  "isPublic": true
+  "isPublic": true,
+
+  "bankName": "국민은행",
+  "accountNumber": "1234567890",
+  "accountHolderName": "홍길동",
+  "phone": "010-1234-5678",
+  "email": "master@example.com"
 }
 ```
+
+> **정산 계좌 정보** (`bankName`, `accountNumber`, `accountHolderName`, `phone`, `email`)는 선택 항목입니다. **5개 모두 입력 시** `MasterSettlement` 가 함께 생성되고, 일부만 입력하거나 누락된 경우 정산 정보는 만들어지지 않습니다 (이후 `POST /master-auth/settlement` 로 별도 등록 가능). 등록 직후 `isVerifiedAccount=false` 상태이며 출금 전 PASS 인증과 계좌 인증이 필요합니다.
 
 **마스터 응답 구조:**
 ```json

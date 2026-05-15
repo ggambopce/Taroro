@@ -1,5 +1,7 @@
 package com.neocompany.taroro.domain.taromaster.docs;
 
+import org.springframework.web.multipart.MultipartFile;
+
 import com.neocompany.taroro.domain.taromaster.dto.request.CreateTaroMasterRequest;
 import com.neocompany.taroro.domain.taromaster.dto.request.UpdateTaroMasterRequest;
 import com.neocompany.taroro.domain.taromaster.dto.response.TaroMasterResponse;
@@ -19,7 +21,46 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "TaroMaster", description = "타로 마스터 관리 API")
 public interface TaroMasterControllerDocs {
 
-    @Operation(summary = "마스터 등록 신청", description = "일반 사용자가 타로 마스터 등록을 신청합니다. 승인 상태는 PENDING으로 저장됩니다.")
+    @Operation(
+        summary = "마스터 등록 신청",
+        description = """
+            일반 사용자가 타로 마스터 등록을 신청합니다. 승인 상태는 PENDING으로 저장됩니다.
+
+            **요청 형식: `multipart/form-data`**
+            - `data` 파트 (application/json, 필수): 마스터 메타데이터 JSON
+            - `profileImage` 파트 (image/*, 선택): 프로필 이미지 파일. 서버가 S3에 업로드 후 URL 저장.
+              누락 시 `profileImageUrl = null` 로 저장됩니다.
+
+            **정산 계좌 정보** (선택, `data` 파트 안에 포함):
+            - `bankName`, `accountNumber`, `accountHolderName`, `phone`, `email` 5개 모두 입력 시 정산 계좌도 함께 등록됩니다.
+            - 일부만 입력하거나 누락된 경우 정산 정보는 생성되지 않으며, 추후 `POST /api/master-auth/settlement` 로 별도 등록 가능합니다.
+            - 등록된 계좌는 `isVerifiedAccount = false` 상태이며 출금 신청 전 PASS 인증 및 계좌 인증이 필요합니다.
+
+            **`data` 파트 JSON 예시:**
+            ```json
+            {
+              "displayName": "별빛타로",
+              "intro": "10년 경력의 타로 마스터입니다.",
+              "specialties": ["연애", "진로"],
+              "careerYears": 10,
+              "isPublic": true,
+              "bankName": "국민은행",
+              "accountNumber": "1234567890",
+              "accountHolderName": "홍길동",
+              "phone": "010-1234-5678",
+              "email": "master@example.com"
+            }
+            ```
+
+            **curl 예시:**
+            ```bash
+            curl -X POST /api/taro-masters \\
+              -H "Cookie: SID=<세션>" \\
+              -F 'data={"displayName":"별빛타로",...};type=application/json' \\
+              -F 'profileImage=@./face.jpg;type=image/jpeg'
+            ```
+            """
+    )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "신청 완료",
             content = @Content(mediaType = "application/json",
@@ -34,7 +75,8 @@ public interface TaroMasterControllerDocs {
                     """)))
     })
     GlobalApiResponse<?> apply(
-        CreateTaroMasterRequest request,
+        @Parameter(description = "마스터 메타데이터 JSON", required = true) CreateTaroMasterRequest request,
+        @Parameter(description = "프로필 이미지 파일 (image/*, 선택)") MultipartFile profileImage,
         @Parameter(hidden = true) PrincipalDetails principal
     );
 
@@ -144,7 +186,16 @@ public interface TaroMasterControllerDocs {
         @Parameter(hidden = true) PrincipalDetails principal
     );
 
-    @Operation(summary = "마스터 정보 수정", description = "로그인한 마스터가 본인 프로필을 수정합니다. SID 쿠키 필요.")
+    @Operation(
+        summary = "마스터 정보 수정",
+        description = """
+            로그인한 마스터가 본인 프로필을 수정합니다. SID 쿠키 필요.
+
+            **요청 형식: `multipart/form-data`**
+            - `data` 파트 (application/json, 필수): 변경할 필드만 포함. null/미포함 필드는 기존 값 유지.
+            - `profileImage` 파트 (image/*, 선택): 이미지 교체 시에만 포함. 누락 시 기존 이미지 URL 유지.
+            """
+    )
     @ApiResponses({
         @ApiResponse(responseCode = "200", description = "처리 결과",
             content = @Content(mediaType = "application/json",
@@ -158,7 +209,8 @@ public interface TaroMasterControllerDocs {
                 }))
     })
     GlobalApiResponse<?> update(
-        UpdateTaroMasterRequest request,
+        @Parameter(description = "변경할 마스터 필드 JSON", required = true) UpdateTaroMasterRequest request,
+        @Parameter(description = "교체할 프로필 이미지 파일 (image/*, 선택)") MultipartFile profileImage,
         @Parameter(hidden = true) PrincipalDetails principal
     );
 }
